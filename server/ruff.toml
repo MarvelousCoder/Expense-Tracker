@@ -1,0 +1,15 @@
+# ruff.toml
+# Python linter + formatter config
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]   # ignore line length — black handles that
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]   # allow unused imports in __init__ files
+"alembic/*" = ["F401", "E402"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

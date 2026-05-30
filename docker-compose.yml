@@ -1,0 +1,70 @@
+# docker-compose.yml
+# This file defines ALL infrastructure services for local development.
+# One command: "docker compose up -d" spins up the entire backend infrastructure.
+
+
+services:
+
+  # ============================================================
+  # PostgreSQL — Primary Database
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:pg16      # pg16 + pgvector extension built-in
+    container_name: expense_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST_AUTH_METHOD: md5        # ← forces md5 for all connections
+    ports:
+      - "5433:5432"                    # host:container
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persist data across restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # Redis — Cache + Celery Broker
+  # ============================================================
+  # INFO: A Celery broker is a message transport that acts as a middleman between your Python application and Celery workers. It receives tasks from your app, holds them in a queue, and safely distributes them to available workers for background processing
+  redis:
+    image: redis:7.2-alpine             # lightweight alpine build
+    container_name: expense_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes   # enable persistence
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # pgAdmin — Visual DB Management (development only)
+  # ============================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: expense_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@expense.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"                      # access at http://localhost:5050
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# ============================================================
+# Named Volumes — data persists even when containers stop
+# ============================================================
+volumes:
+  postgres_data:
+  redis_data:
