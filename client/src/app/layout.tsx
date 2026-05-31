@@ -55,10 +55,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "FinanceAI — Smart Personal Finance",
-    template: "%s | FinanceAI",
+    default: "Expense-Tracker — Smart Personal Finance",
+    template: "%s | Expense_Tracker",
   },
-  description: "AI-powered personal finance management platform",
+  description: "AI-powered personal expense tracker platform",
 }
 
 export default function RootLayout({

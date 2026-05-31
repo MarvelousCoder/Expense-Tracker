@@ -10,7 +10,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange={false}
-            storageKey="financeai-theme"
+            storageKey="expenseTracker-theme"
         >
             {children}
         </NextThemesProvider>

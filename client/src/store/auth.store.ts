@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
             },
         }),
         {
-            name: "financeai-auth",
+            name: "expense_tracker-auth",
             // Only persist these fields
             partialize: (state) => ({
                 user: state.user,

@@ -14,6 +14,39 @@ export const ROUTES = {
     SETTINGS: "/settings",
 } as const
 
+export const NAV_ITEMS = [
+    {
+        label: "Dashboard",
+        href: "/dashboard",
+        icon: "LayoutDashboard",
+    },
+    {
+        label: "Transactions",
+        href: "/transactions",
+        icon: "ArrowLeftRight",
+    },
+    {
+        label: "Budgets",
+        href: "/budgets",
+        icon: "Target",
+    },
+    {
+        label: "Analytics",
+        href: "/analytics",
+        icon: "BarChart3",
+    },
+    {
+        label: "AI Insights",
+        href: "/ai-insights",
+        icon: "Sparkles",
+    },
+    {
+        label: "Settings",
+        href: "/settings",
+        icon: "Settings",
+    },
+] as const
+
 export const CURRENCIES = [
     { code: "INR", symbol: "₹", name: "Indian Rupee" },
     { code: "USD", symbol: "$", name: "US Dollar" },
