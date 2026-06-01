@@ -6,6 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 import uuid
 import enum
 from app.core.database import Base
@@ -85,6 +86,10 @@ class User(Base):
     # Soft delete — never hard delete users
     # ================================
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User {self.email}>"

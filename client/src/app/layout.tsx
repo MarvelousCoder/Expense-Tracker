@@ -42,6 +42,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/shared/theme-provider"
 import { QueryProvider } from "@/components/shared/query-provider"
 import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -77,6 +78,7 @@ export default function RootLayout({
           <QueryProvider>
             {children}
           </QueryProvider>
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

@@ -10,6 +10,12 @@ from app.api.v1.health import router as health_router
 from app.api.v1.auth import router as auth_router
 from app.core.exceptions import register_exception_handlers
 from app.api.v1.users import router as users_router
+from app.utils.seed import seed_default_categories
+from app.core.database import AsyncSessionLocal
+
+from app.api.v1.accounts import router as accounts_router
+from app.api.v1.categories import router as categories_router
+from app.api.v1.transactions import router as transactions_router
 
 # ================================
 # Logging Setup
@@ -29,6 +35,11 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
+
+    # Seed default categories on startup
+    async with AsyncSessionLocal() as db:
+        await seed_default_categories(db)
+    
     yield
     # Shutdown
     logger.info("Shutting down — closing DB connections")
@@ -70,6 +81,9 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(accounts_router, prefix="/api/v1")
+app.include_router(categories_router, prefix="/api/v1")
+app.include_router(transactions_router, prefix="/api/v1")
 
 
 # ================================

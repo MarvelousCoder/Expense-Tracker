@@ -15,7 +15,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.config import settings
 from app.core.database import Base
 from app.models.user import User
-
+from app.models.account import Account
+from app.models.category import Category
+from app.models.transaction import Transaction
 # Import all models here so Alembic can detect them
 # We'll add more as we create them
 # from app.models.user import User  ← uncomment when model exists
