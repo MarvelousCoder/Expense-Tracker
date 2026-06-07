@@ -18,6 +18,7 @@ from app.models.user import User
 from app.models.account import Account
 from app.models.category import Category
 from app.models.transaction import Transaction
+from app.models.budget import Budget
 # Import all models here so Alembic can detect them
 # We'll add more as we create them
 # from app.models.user import User  ← uncomment when model exists

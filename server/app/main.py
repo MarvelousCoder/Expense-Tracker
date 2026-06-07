@@ -16,6 +16,7 @@ from app.core.database import AsyncSessionLocal
 from app.api.v1.accounts import router as accounts_router
 from app.api.v1.categories import router as categories_router
 from app.api.v1.transactions import router as transactions_router
+from app.api.v1.budgets import router as budgets_router
 
 # ================================
 # Logging Setup
@@ -84,7 +85,7 @@ app.include_router(users_router, prefix="/api/v1")
 app.include_router(accounts_router, prefix="/api/v1")
 app.include_router(categories_router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
-
+app.include_router(budgets_router, prefix="/api/v1")
 
 # ================================
 # Root

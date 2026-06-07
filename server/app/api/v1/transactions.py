@@ -3,16 +3,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.transaction import Transaction,TransactionType
+from app.models.category import Category as CategoryModel
 from typing import Optional
 from uuid import UUID
 from datetime import date
 import csv
 import io
+from sqlalchemy import select, func, extract, case
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from app.models.transaction import TransactionType
 from app.schemas.transaction import (
     TransactionCreate, TransactionUpdate,
     TransactionResponse, TransactionListResponse, DashboardSummary
@@ -128,6 +130,263 @@ async def get_transaction(
         raise HTTPException(status_code=404, detail="Transaction not found")
     return _build_response(transaction)
 
+
+
+# @router.get("/analytics/summary")
+# async def get_analytics_summary(
+#     year: int = Query(default=None),
+#     current_user: User = Depends(get_current_active_user),
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     from datetime import datetime
+#     target_year = year or datetime.now().year
+
+#     # Monthly breakdown for the year
+#     result = await db.execute(
+#         select(
+#             extract("month", Transaction.date).label("month"),
+#             Transaction.transaction_type,
+#             func.sum(Transaction.amount).label("total")
+#         )
+#         .where(
+#             Transaction.user_id == current_user.id,
+#             Transaction.deleted_at.is_(None),
+#             extract("year", Transaction.date) == target_year
+#         )
+#         .group_by("month", Transaction.transaction_type)
+#         .order_by("month")
+#     )
+#     rows = result.all()
+
+#     # Build monthly data
+#     monthly = {}
+#     for row in rows:
+#         m = int(row.month)
+#         if m not in monthly:
+#             monthly[m] = {"month": m, "income": 0, "expense": 0}
+#         if row.transaction_type == TransactionType.INCOME:
+#             monthly[m]["income"] = row.total / 100
+#         elif row.transaction_type == TransactionType.EXPENSE:
+#             monthly[m]["expense"] = row.total / 100
+
+#     # Category breakdown
+#     cat_result = await db.execute(
+#         select(
+#             Transaction.category_id,
+#             func.sum(Transaction.amount).label("total")
+#         )
+#         .where(
+#             Transaction.user_id == current_user.id,
+#             Transaction.deleted_at.is_(None),
+#             Transaction.transaction_type == TransactionType.EXPENSE,
+#             extract("year", Transaction.date) == target_year
+#         )
+#         .group_by(Transaction.category_id)
+#         .order_by(func.sum(Transaction.amount).desc())
+#         .limit(8)
+#     )
+#     cat_rows = cat_result.all()
+
+#     # Fetch category names
+#     from app.models.category import Category
+#     categories_data = []
+#     for row in cat_rows:
+#         if row.category_id:
+#             cat = await db.get(Category, row.category_id)
+#             if cat:
+#                 categories_data.append({
+#                     "name": cat.name,
+#                     "icon": cat.icon,
+#                     "color": cat.color,
+#                     "amount": row.total / 100,
+#                 })
+#         else:
+#             categories_data.append({
+#                 "name": "Uncategorized",
+#                 "icon": "📦",
+#                 "color": "#94A3B8",
+#                 "amount": row.total / 100,
+#             })
+
+#     return {
+#         "year": target_year,
+#         "monthly": list(monthly.values()),
+#         "categories": categories_data,
+#     }
+
+# NOTE: 2nd change
+# @router.get("/analytics/summary")
+# async def get_analytics_summary(
+#     year: int = Query(default=None),
+#     current_user: User = Depends(get_current_active_user),
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     from datetime import datetime as dt
+#     from sqlalchemy import select, func, extract
+#     from app.models.category import Category as CategoryModel
+
+#     target_year = year or dt.now().year
+
+#     # Monthly income vs expense breakdown
+#     monthly_result = await db.execute(
+#         select(
+#             extract("month", Transaction.date).label("month"),
+#             Transaction.transaction_type,
+#             func.sum(Transaction.amount).label("total")
+#         )
+#         .where(
+#             Transaction.user_id == current_user.id,
+#             Transaction.deleted_at.is_(None),
+#             extract("year", Transaction.date) == target_year
+#         )
+#         .group_by(
+#             extract("month", Transaction.date),
+#             Transaction.transaction_type
+#         )
+#         .order_by(extract("month", Transaction.date))
+#     )
+#     rows = monthly_result.all()
+
+#     monthly = {}
+#     for row in rows:
+#         m = int(row.month)
+#         if m not in monthly:
+#             monthly[m] = {"month": m, "income": 0, "expense": 0}
+#         if row.transaction_type == TransactionType.INCOME:
+#             monthly[m]["income"] = (row.total or 0) / 100
+#         elif row.transaction_type == TransactionType.EXPENSE:
+#             monthly[m]["expense"] = (row.total or 0) / 100
+
+#     # Category spending breakdown
+#     cat_result = await db.execute(
+#         select(
+#             Transaction.category_id,
+#             func.sum(Transaction.amount).label("total")
+#         )
+#         .where(
+#             Transaction.user_id == current_user.id,
+#             Transaction.deleted_at.is_(None),
+#             Transaction.transaction_type == TransactionType.EXPENSE,
+#             extract("year", Transaction.date) == target_year
+#         )
+#         .group_by(Transaction.category_id)
+#         .order_by(func.sum(Transaction.amount).desc())
+#         .limit(8)
+#     )
+#     cat_rows = cat_result.all()
+
+#     categories_data = []
+#     for row in cat_rows:
+#         if row.category_id:
+#             cat_result2 = await db.execute(
+#                 select(CategoryModel).where(CategoryModel.id == row.category_id)
+#             )
+#             cat = cat_result2.scalar_one_or_none()
+#             if cat:
+#                 categories_data.append({
+#                     "name": cat.name,
+#                     "icon": cat.icon,
+#                     "color": cat.color,
+#                     "amount": (row.total or 0) / 100,
+#                 })
+#         else:
+#             categories_data.append({
+#                 "name": "Uncategorized",
+#                 "icon": "📦",
+#                 "color": "#94A3B8",
+#                 "amount": (row.total or 0) / 100,
+#             })
+
+#     return {
+#         "year": target_year,
+#         "monthly": list(monthly.values()),
+#         "categories": categories_data,
+#     }
+
+@router.get("/analytics/summary")
+async def get_analytics_summary(
+    year: int = Query(default=None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from datetime import datetime as dt
+    target_year = year or dt.now().year
+
+    # Monthly income vs expense breakdown
+    monthly_result = await db.execute(
+        select(
+            extract("month", Transaction.date).label("month"),
+            Transaction.transaction_type,
+            func.sum(Transaction.amount).label("total")
+        )
+        .where(
+            Transaction.user_id == current_user.id,
+            Transaction.deleted_at.is_(None),
+            extract("year", Transaction.date) == target_year
+        )
+        .group_by(
+            extract("month", Transaction.date),
+            Transaction.transaction_type
+        )
+        .order_by(extract("month", Transaction.date))
+    )
+    rows = monthly_result.all()
+
+    monthly = {}
+    for row in rows:
+        m = int(row.month)
+        if m not in monthly:
+            monthly[m] = {"month": m, "income": 0, "expense": 0}
+        if row.transaction_type == TransactionType.INCOME:
+            monthly[m]["income"] = (row.total or 0) / 100
+        elif row.transaction_type == TransactionType.EXPENSE:
+            monthly[m]["expense"] = (row.total or 0) / 100
+
+    # Category spending breakdown
+    cat_result = await db.execute(
+        select(
+            Transaction.category_id,
+            func.sum(Transaction.amount).label("total")
+        )
+        .where(
+            Transaction.user_id == current_user.id,
+            Transaction.deleted_at.is_(None),
+            Transaction.transaction_type == TransactionType.EXPENSE,
+            extract("year", Transaction.date) == target_year
+        )
+        .group_by(Transaction.category_id)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(8)
+    )
+    cat_rows = cat_result.all()
+
+    categories_data = []
+    for row in cat_rows:
+        if row.category_id:
+            cat_fetch = await db.execute(
+                select(CategoryModel).where(CategoryModel.id == row.category_id)
+            )
+            cat = cat_fetch.scalar_one_or_none()
+            if cat:
+                categories_data.append({
+                    "name": cat.name,
+                    "icon": cat.icon,
+                    "color": cat.color,
+                    "amount": (row.total or 0) / 100,
+                })
+        else:
+            categories_data.append({
+                "name": "Uncategorized",
+                "icon": "📦",
+                "color": "#94A3B8",
+                "amount": (row.total or 0) / 100,
+            })
+
+    return {
+        "year": target_year,
+        "monthly": list(monthly.values()),
+        "categories": categories_data,
+    }
 
 @router.patch("/{transaction_id}", response_model=TransactionResponse)
 async def update_transaction(
