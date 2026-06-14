@@ -1,6 +1,6 @@
 // src/hooks/useTransactions.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { transactionService, TransactionFilters, CreateTransactionData } from "@/services/transaction.service"
+import { transactionService, TransactionFilters, CreateTransactionData, AnalyticsSummary } from "@/services/transaction.service"
 import { toast } from "sonner"
 
 export const TRANSACTION_KEYS = {
@@ -45,5 +45,12 @@ export function useDeleteTransaction() {
             queryClient.invalidateQueries({ queryKey: TRANSACTION_KEYS.all })
             toast.success("Transaction deleted")
         },
+    })
+}
+
+export function useAnalyticsSummary(year?: number) {
+    return useQuery({
+        queryKey: ["analytics", "summary", year],
+        queryFn: () => transactionService.getAnalyticsSummary(year),
     })
 }

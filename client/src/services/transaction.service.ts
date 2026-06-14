@@ -39,6 +39,21 @@ export interface DashboardSummary {
     expense_change_pct: number
 }
 
+export interface AnalyticsSummary {
+    year: number
+    monthly: Array<{
+        month: number
+        income: number
+        expense: number
+    }>
+    categories: Array<{
+        name: string
+        icon: string
+        color: string
+        amount: number
+    }>
+}
+
 export interface CreateTransactionData {
     account_id: string
     amount: number
@@ -89,6 +104,11 @@ export const transactionService = {
 
     getDashboardSummary: () =>
         api.get<DashboardSummary>("/transactions/dashboard"),
+
+    getAnalyticsSummary: (year?: number) =>
+        api.get<AnalyticsSummary>(
+            `/transactions/analytics/summary${year ? `?year=${year}` : ""}`
+        ),
 
     exportCSV: async () => {
         const token = localStorage.getItem("access_token")
