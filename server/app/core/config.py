@@ -5,6 +5,7 @@
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 from pathlib import Path
+from pydantic import field_validator
 
 # This finds the .env file relative to THIS file's location
 # config.py is at server/app/core/config.py
@@ -61,12 +62,38 @@ class Settings(BaseSettings):
     # ================================
     # CORS
     # ================================
+    # ALLOWED_ORIGINS: List[str] = [
+    #     "http://localhost:3000",
+    #     "http://localhost:3001",
+    # ]
     ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-    ]
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
 
-    model_config = {
+@field_validator("ALLOWED_ORIGINS", mode="before")
+@classmethod
+def parse_allowed_origins(cls, v):
+    """
+    Accept ALLOWED_ORIGINS as either:
+    - A JSON array string: '["http://localhost:3000"]'
+    - A comma-separated string: 'http://localhost:3000,http://localhost:3001'
+    - Already a list (from default)
+    """
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        v = v.strip()
+        if not v:
+            return ["http://localhost:3000"]
+        if v.startswith("["):
+            import json
+            return json.loads(v)
+        # comma separated
+        return [origin.strip() for origin in v.split(",")]
+    return v
+
+model_config = {
         "env_file": str(ENV_FILE),
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
