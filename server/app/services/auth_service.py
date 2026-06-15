@@ -134,6 +134,8 @@ from app.repositories.account_repository import AccountRepository
 from app.schemas.user import UserCreate, TokenResponse, UserResponse, LoginRequest
 from app.schemas.account import AccountCreate
 from app.core.security import verify_password, create_access_token, create_refresh_token, decode_token
+from app.models.account import AccountType
+import logging
 
 
 class AuthService:
@@ -173,11 +175,11 @@ class AuthService:
         try:
             default_account = AccountCreate(
                 name="Main Account",
-                account_type="savings",
+                account_type=AccountType.SAVINGS,  # use enum not string
                 balance=0,
                 currency=user_data.currency or "INR",
                 color="#6366f1",
-                icon="🏦",
+                icon="wallet",
                 is_default=True,
             )
             await self.account_repo.create(user.id, default_account)
@@ -185,6 +187,7 @@ class AuthService:
         except Exception:
             # Account creation failure must never block registration
             # User can create accounts manually if this fails
+            logging.getLogger(__name__).error(f"Auto account creation failed: {e}")
             await self.db.rollback()
 
         # Generate tokens
