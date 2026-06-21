@@ -310,7 +310,7 @@ export default function AnalyticsPage() {
 // Build a full 12-month array (Jan–Dec) so the line/bar charts always
 // show a complete timeline, even if only one month has real data.
 // Without this, a single data point renders as a floating dot with no line.
-    const monthlyMap = new Map(
+    const monthlyMap = new Map<number, { month: number; income: number; expense: number }>(
         (data?.monthly ?? []).map((m: any) => [m.month, m])
     )
 
