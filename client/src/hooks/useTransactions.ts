@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { transactionService, TransactionFilters, CreateTransactionData, AnalyticsSummary } from "@/services/transaction.service"
 import { toast } from "sonner"
+import { BUDGET_KEYS } from "./useBudgets"
 
 export const TRANSACTION_KEYS = {
     all: ["transactions"] as const,
@@ -29,10 +30,31 @@ export function useCreateTransaction() {
         mutationFn: (data: CreateTransactionData) => transactionService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: TRANSACTION_KEYS.all })
+            // Refresh budgets so spent/remaining reflects the new transaction immediately
+            queryClient.invalidateQueries({ queryKey: BUDGET_KEYS.all })
             toast.success("Transaction added successfully")
         },
         onError: (error: any) => {
             toast.error(error.message || "Failed to add transaction")
+        },
+    })
+}
+
+// Invalidates transactions, dashboard, analytics, and budgets,
+// since amount/type/category/date can all change and affect every screen.
+export function useUpdateTransaction() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<CreateTransactionData> }) =>
+            transactionService.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: TRANSACTION_KEYS.all })
+            queryClient.invalidateQueries({ queryKey: BUDGET_KEYS.all })
+            queryClient.invalidateQueries({ queryKey: ["analytics"] })
+            toast.success("Transaction updated successfully")
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update transaction")
         },
     })
 }
@@ -43,6 +65,8 @@ export function useDeleteTransaction() {
         mutationFn: (id: string) => transactionService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: TRANSACTION_KEYS.all })
+            // Refresh budgets so spent reflects the deletion
+            queryClient.invalidateQueries({ queryKey: BUDGET_KEYS.all })
             toast.success("Transaction deleted")
         },
     })

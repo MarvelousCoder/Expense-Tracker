@@ -5,9 +5,9 @@ from sqlalchemy import select, update, func, and_, extract
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from app.models.budget import Budget
+from app.models.budget import Budget, BudgetPeriod
 from app.models.transaction import Transaction, TransactionType
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
 
@@ -42,6 +42,45 @@ class BudgetRepository:
         .where(Budget.id == budget.id)
     )
         return result.scalar_one()
+
+    async def exists_duplicate(
+        self,
+        user_id: UUID,
+        category_id: Optional[UUID],
+        period: BudgetPeriod,
+        exclude_budget_id: Optional[UUID] = None
+    ) -> bool:
+        """
+        Check if an active budget already exists for the same user,
+        category, and period combination. Prevents confusing overlapping
+        budgets like two 'Monthly Food' budgets both tracking the same
+        spending window.
+
+        category_id=None means "all categories" — handled correctly via
+        IS NULL comparison so two all-category budgets for the same
+        period are also caught as duplicates.
+
+        exclude_budget_id is used when editing — so a budget doesn't
+        flag itself as a duplicate of itself.
+        """
+        conditions = [
+            Budget.user_id == user_id,
+            Budget.period == period,
+            Budget.is_active == True,
+        ]
+
+        if category_id is None:
+            conditions.append(Budget.category_id.is_(None))
+        else:
+            conditions.append(Budget.category_id == category_id)
+
+        if exclude_budget_id:
+            conditions.append(Budget.id != exclude_budget_id)
+
+        result = await self.db.execute(
+            select(Budget.id).where(and_(*conditions)).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def get_all(self, user_id: UUID) -> List[BudgetResponse]:
         result = await self.db.execute(
@@ -84,54 +123,83 @@ class BudgetRepository:
         )
         await self.db.flush()
 
-    async def _enrich(self, budget: Budget, user_id: UUID) -> BudgetResponse:
-        """Calculate spent amount for the budget's period."""
+    def _get_period_date_range(self, period: BudgetPeriod) -> tuple[datetime, datetime]:
+        """
+        Compute start and end datetimes for the current period window.
+        Always uses NOW so old transactions are always included — no stale month/year.
+        """
         now = datetime.now(timezone.utc)
-        month = budget.month or now.month
-        year = budget.year or now.year
 
-        conditions = [
-            Transaction.user_id == user_id,
-            Transaction.deleted_at.is_(None),
-            Transaction.transaction_type == TransactionType.EXPENSE,
-            extract("month", Transaction.date) == month,
-            extract("year", Transaction.date) == year,
-        ]
+        if period == BudgetPeriod.WEEKLY:
+            # Monday to Sunday of the current ISO week
+            start = now - timedelta(days=now.weekday())
+            start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+            end = start + timedelta(days=7)
 
-        if budget.category_id:
-            conditions.append(Transaction.category_id == budget.category_id)
+        elif period == BudgetPeriod.YEARLY:
+            start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
 
-        result = await self.db.execute(
-            select(func.sum(Transaction.amount))
-            .where(and_(*conditions))
-        )
-        # Correct — force to int
-        spent_paise = int(result.scalar_one() or 0)
-        spent = spent_paise / 100
-        budget_amount = budget.amount / 100
-        remaining = max(0, budget_amount - spent)
-        percentage = min(100, round((spent / budget_amount) * 100, 1)) if budget_amount > 0 else 0
+        else:
+            # MONTHLY — default
+            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            # First day of next month
+            if now.month == 12:
+                end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            else:
+                end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        return BudgetResponse(
-            id=budget.id,
-            user_id=budget.user_id,
-            category_id=budget.category_id,
-            category_name=budget.category.name if budget.category else None,
-            category_icon=budget.category.icon if budget.category else None,
-            category_color=budget.category.color if budget.category else None,
-            name=budget.name,
-            amount=budget.amount,
-            amount_display=budget_amount,
-            period=budget.period,
-            month=budget.month,
-            year=budget.year,
-            is_active=budget.is_active,
-            alert_threshold=budget.alert_threshold,
-            spent=spent,
-            spent_paise=spent_paise,
-            remaining=remaining,
-            percentage=percentage,
-            is_exceeded=percentage >= 100,
-            is_alert=percentage >= budget.alert_threshold,
-            created_at=budget.created_at,
-        )
+        return start, end    
+
+    async def _enrich(self, budget: Budget, user_id: UUID) -> BudgetResponse:
+            """
+            Calculate spent amount dynamically based on period.
+            Always computes the current window from NOW — never trusts stored month/year.
+            This means old transactions are always included correctly.
+            """
+            start, end = self._get_period_date_range(budget.period)
+
+            conditions = [
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_type == TransactionType.EXPENSE,
+                Transaction.date >= start,
+                Transaction.date < end,
+            ]
+
+            if budget.category_id:
+                conditions.append(Transaction.category_id == budget.category_id)
+
+            result = await self.db.execute(
+                select(func.sum(Transaction.amount))
+                .where(and_(*conditions))
+            )
+            spent_paise = int(result.scalar_one() or 0)
+            spent = spent_paise / 100
+            budget_amount = budget.amount / 100
+            remaining = max(0, budget_amount - spent)
+            percentage = min(100, round((spent / budget_amount) * 100, 1)) if budget_amount > 0 else 0
+
+            return BudgetResponse(
+                id=budget.id,
+                user_id=budget.user_id,
+                category_id=budget.category_id,
+                category_name=budget.category.name if budget.category else None,
+                category_icon=budget.category.icon if budget.category else None,
+                category_color=budget.category.color if budget.category else None,
+                name=budget.name,
+                amount=budget.amount,
+                amount_display=budget_amount,
+                period=budget.period,
+                month=budget.month,
+                year=budget.year,
+                is_active=budget.is_active,
+                alert_threshold=budget.alert_threshold,
+                spent=spent,
+                spent_paise=spent_paise,
+                remaining=remaining,
+                percentage=percentage,
+                is_exceeded=percentage >= 100,
+                is_alert=percentage >= budget.alert_threshold,
+                created_at=budget.created_at,
+            )

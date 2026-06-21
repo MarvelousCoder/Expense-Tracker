@@ -97,8 +97,16 @@ export const transactionService = {
             amount: Math.round(data.amount * 100), // convert to paise
         }),
 
+    // Fix: update() now converts amount to paise just like create() does.
+    // Previously this sent raw rupee values straight to the backend,
+    // which expects paise — editing an amount would have silently corrupted it.
     update: (id: string, data: Partial<CreateTransactionData>) =>
-        api.patch<Transaction>(`/transactions/${id}`, data),
+        api.patch<Transaction>(`/transactions/${id}`, {
+            ...data,
+            ...(data.amount !== undefined
+                ? { amount: Math.round(data.amount * 100) }
+                : {}),
+            }),
 
     delete: (id: string) => api.delete(`/transactions/${id}`),
 

@@ -27,8 +27,6 @@ export interface CreateBudgetData {
     amount: number       // in paise
     period: string
     category_id?: string
-    month?: number
-    year?: number
     alert_threshold?: number
 }
 

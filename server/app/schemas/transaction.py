@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
-from datetime import datetime, date
+from datetime import datetime, date as date_type
 from uuid import UUID
 from app.models.transaction import TransactionType, PaymentMethod
 
@@ -11,10 +11,10 @@ class TransactionBase(BaseModel):
     amount: int
     # Amount in paise/cents — frontend sends 50000 for ₹500.00
     transaction_type: TransactionType
-    payment_method: PaymentMethod = PaymentMethod.UPI
+    payment_method: PaymentMethod 
     description: str
     notes: Optional[str] = None
-    date: date
+    date: date_type
     category_id: Optional[UUID] = None
     is_recurring: bool = False
 
@@ -36,7 +36,7 @@ class TransactionUpdate(BaseModel):
     payment_method: Optional[PaymentMethod] = None
     description: Optional[str] = None
     notes: Optional[str] = None
-    date: Optional[date] = None
+    date: Optional[date_type] = None
     category_id: Optional[UUID] = None
     account_id: Optional[UUID] = None
     is_recurring: Optional[bool] = None

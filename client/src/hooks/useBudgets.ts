@@ -28,6 +28,24 @@ export function useCreateBudget() {
     })
 }
 
+// Only name, amount, and alert_threshold are editable —
+// category and period are fixed at creation since changing them
+// would invalidate the existing spent/remaining calculation.
+export function useUpdateBudget() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<CreateBudgetData> }) =>
+            budgetService.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: BUDGET_KEYS.all })
+            toast.success("Budget updated")
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to update budget")
+        },
+    })
+}
+
 export function useDeleteBudget() {
     const queryClient = useQueryClient()
     return useMutation({

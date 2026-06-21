@@ -970,11 +970,13 @@ async def get_analytics_summary(
     for row in rows:
         m = int(row.month)
         if m not in monthly:
-            monthly[m] = {"month": m, "income": 0, "expense": 0}
+            monthly[m] = {"month": m, "income": 0.0, "expense": 0.0}
         if row.transaction_type == TransactionType.INCOME:
-            monthly[m]["income"] = (row.total or 0) / 100
+            monthly[m]["income"] = round(float(row.total or 0) / 100, 2)
         elif row.transaction_type == TransactionType.EXPENSE:
-            monthly[m]["expense"] = (row.total or 0) / 100
+            monthly[m]["expense"] = round(float(row.total or 0) / 100, 2)
+        elif row.transaction_type == TransactionType.TRANSFER:
+            monthly[m]["expense"] = round(monthly[m]["expense"] + float(row.total or 0) / 100, 2)
 
     # Category spending breakdown
     cat_result = await db.execute(
@@ -985,35 +987,45 @@ async def get_analytics_summary(
         .where(
             Transaction.user_id == current_user.id,
             Transaction.deleted_at.is_(None),
-            Transaction.transaction_type == TransactionType.EXPENSE,
+             Transaction.transaction_type.in_([
+                TransactionType.EXPENSE,
+                TransactionType.TRANSFER
+            ]),
             extract("year", Transaction.date) == target_year
         )
         .group_by(Transaction.category_id)
         .order_by(func.sum(Transaction.amount).desc())
-        .limit(8)
+        # .limit(8)
     )
     cat_rows = cat_result.all()
 
+     # Fetch ALL needed categories in a single batch query — no loop, no N+1
+    category_ids = [row.category_id for row in cat_rows if row.category_id]
+    categories_map = {}
+    if category_ids:
+        cat_fetch = await db.execute(
+            select(CategoryModel).where(CategoryModel.id.in_(category_ids))
+        )
+        for cat in cat_fetch.scalars().all():
+            categories_map[cat.id] = cat
+
     categories_data = []
     for row in cat_rows:
-        if row.category_id:
-            cat_fetch = await db.execute(
-                select(CategoryModel).where(CategoryModel.id == row.category_id)
-            )
-            cat = cat_fetch.scalar_one_or_none()
-            if cat:
-                categories_data.append({
-                    "name": cat.name,
-                    "icon": cat.icon,
-                    "color": cat.color,
-                    "amount": (row.total or 0) / 100,
-                })
+        cat = categories_map.get(row.category_id)
+        amount = round(float(row.total or 0) / 100, 2)
+        if cat:
+            categories_data.append({
+                "name": cat.name,
+                "icon": cat.icon,
+                "color": cat.color,
+                "amount": amount,
+            })
         else:
             categories_data.append({
                 "name": "Uncategorized",
                 "icon": "📦",
                 "color": "#94A3B8",
-                "amount": (row.total or 0) / 100,
+                "amount": amount,
             })
 
     result = {

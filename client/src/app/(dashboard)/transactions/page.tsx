@@ -22,9 +22,50 @@ import { AddTransactionModal } from "@/components/forms/add-transaction-modal"
 import {
   Plus, Search, Download, MoreHorizontal,
   Trash2, ChevronLeft, ChevronRight,
+  Pencil,
 } from "lucide-react"
 import { transactionService } from "@/services/transaction.service"
 import { format } from "date-fns"
+import { EditTransactionModal } from "@/components/forms/edit-transaction-modal"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+
+// ─── Delete Confirmation Dialog ────────────────────────────────────────────────
+function DeleteTransactionDialog({ transaction, onConfirm, onCancel }: {
+  transaction: Transaction | null
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <Dialog open={!!transaction} onOpenChange={(v) => { if (!v) onCancel() }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete Transaction</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-foreground">
+              {transaction?.description}
+            </span>
+            ? Your account balance will be adjusted accordingly.
+          </p>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default function TransactionsPage() {
   const { user } = useAuthStore()
@@ -32,6 +73,8 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("")
   const [addOpen, setAddOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const symbol = user?.currency === "USD" ? "$" : "₹"
 
   const { data, isLoading } = useTransactions({
@@ -42,6 +85,12 @@ export default function TransactionsPage() {
   })
 
   const { mutate: deleteTransaction } = useDeleteTransaction()
+
+  const handleConfirmDelete = () => {
+    if (!deletingTransaction) return
+    deleteTransaction(deletingTransaction.id)
+    setDeletingTransaction(null)
+  }
 
   const columns: ColumnDef<Transaction>[] = [
     {
@@ -91,7 +140,7 @@ export default function TransactionsPage() {
               ? "bg-green-500/10 text-green-600 dark:text-green-400"
               : row.original.transaction_type === "expense"
                 ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
             }`}
         >
           {row.original.transaction_type}
@@ -133,9 +182,13 @@ export default function TransactionsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setEditingTransaction(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => deleteTransaction(row.original.id)}
+              onClick={() => setDeletingTransaction(row.original)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
@@ -289,6 +342,16 @@ export default function TransactionsPage() {
       </Card>
 
       <AddTransactionModal open={addOpen} onOpenChange={setAddOpen} />
+      <EditTransactionModal
+        transaction={editingTransaction}
+        onOpenChange={(open) => { if (!open) setEditingTransaction(null) }}
+      />
+
+      <DeleteTransactionDialog
+        transaction={deletingTransaction}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingTransaction(null)}
+      />
     </div>
   )
 }

@@ -116,6 +116,49 @@ class TransactionRepository:
         items = list(result.scalars().all())
         return items, total
 
+    # async def update(
+    #     self,
+    #     transaction_id: UUID,
+    #     user_id: UUID,
+    #     data: TransactionUpdate
+    # ) -> Optional[Transaction]:
+    #     existing = await self.get_by_id(transaction_id, user_id)
+    #     if not existing:
+    #         return None
+
+    #     values = data.model_dump(exclude_none=True)
+
+    #     # Reverse old balance effect
+    #     old_delta = existing.amount if existing.transaction_type == TransactionType.INCOME else -existing.amount
+    #     await self.db.execute(
+    #         update(Account)
+    #         .where(Account.id == existing.account_id)
+    #         .values(balance=Account.balance - old_delta)
+    #     )
+
+    #     await self.db.execute(
+    #         update(Transaction)
+    #         .where(Transaction.id == transaction_id)
+    #         .values(**values)
+    #     )
+    #     await self.db.flush()
+
+    #     updated = await self.get_by_id(transaction_id, user_id)
+
+    #     # Apply new balance effect
+    #     new_type = data.transaction_type or existing.transaction_type
+    #     new_amount = data.amount or existing.amount
+    #     new_account = data.account_id or existing.account_id
+    #     new_delta = new_amount if new_type == TransactionType.INCOME else -new_amount
+    #     await self.db.execute(
+    #         update(Account)
+    #         .where(Account.id == new_account)
+    #         .values(balance=Account.balance + new_delta)
+    #     )
+    #     await self.db.flush()
+    #     return updated
+
+    # NOTE: 2nd change for update function
     async def update(
         self,
         transaction_id: UUID,
@@ -128,13 +171,40 @@ class TransactionRepository:
 
         values = data.model_dump(exclude_none=True)
 
-        # Reverse old balance effect
+        # Determine the new state, falling back to existing values for anything not changed
+        new_type = data.transaction_type or existing.transaction_type
+        new_amount = data.amount if data.amount is not None else existing.amount
+        new_account = data.account_id or existing.account_id
+
         old_delta = existing.amount if existing.transaction_type == TransactionType.INCOME else -existing.amount
-        await self.db.execute(
-            update(Account)
-            .where(Account.id == existing.account_id)
-            .values(balance=Account.balance - old_delta)
-        )
+        new_delta = new_amount if new_type == TransactionType.INCOME else -new_amount
+
+        if new_account == existing.account_id:
+            # Same account — apply only the NET change in one atomic SQL statement.
+            # balance = balance - old_delta + new_delta, computed entirely in SQL
+            # using the column's live value, so there's no read-modify-write gap
+            # for a concurrent request to land in.
+            net_delta = new_delta - old_delta
+            await self.db.execute(
+                update(Account)
+                .where(Account.id == new_account)
+                .values(balance=Account.balance + net_delta)
+            )
+        else:
+            # Account changed — reverse the effect on the old account and apply
+            # the new effect on the new account. Each is still a single atomic
+            # SQL UPDATE using the column's current value, just on two different rows,
+            # so there's no race window within either account's balance.
+            await self.db.execute(
+                update(Account)
+                .where(Account.id == existing.account_id)
+                .values(balance=Account.balance - old_delta)
+            )
+            await self.db.execute(
+                update(Account)
+                .where(Account.id == new_account)
+                .values(balance=Account.balance + new_delta)
+            )
 
         await self.db.execute(
             update(Transaction)
@@ -143,20 +213,7 @@ class TransactionRepository:
         )
         await self.db.flush()
 
-        updated = await self.get_by_id(transaction_id, user_id)
-
-        # Apply new balance effect
-        new_type = data.transaction_type or existing.transaction_type
-        new_amount = data.amount or existing.amount
-        new_account = data.account_id or existing.account_id
-        new_delta = new_amount if new_type == TransactionType.INCOME else -new_amount
-        await self.db.execute(
-            update(Account)
-            .where(Account.id == new_account)
-            .values(balance=Account.balance + new_delta)
-        )
-        await self.db.flush()
-        return updated
+        return await self.get_by_id(transaction_id, user_id)
 
     async def soft_delete(self, transaction_id: UUID, user_id: UUID) -> bool:
         existing = await self.get_by_id(transaction_id, user_id)
@@ -219,9 +276,10 @@ class TransactionRepository:
         total_balance = balance_result.scalar_one() or 0
 
         curr_income = current.get(TransactionType.INCOME, 0)
-        curr_expense = current.get(TransactionType.EXPENSE, 0)
+         # Transfer counts as expense — it reduces spendable balance just like a regular expense
+        curr_expense = current.get(TransactionType.EXPENSE, 0) + current.get(TransactionType.TRANSFER, 0)
         prev_income = previous.get(TransactionType.INCOME, 0)
-        prev_expense = previous.get(TransactionType.EXPENSE, 0)
+        prev_expense = previous.get(TransactionType.EXPENSE, 0) + previous.get(TransactionType.TRANSFER, 0)
 
         def pct_change(current, previous):
             if previous == 0:
@@ -232,7 +290,8 @@ class TransactionRepository:
             "total_balance": total_balance / 100,
             "monthly_income": curr_income / 100,
             "monthly_expenses": curr_expense / 100,
-            "total_savings": (total_balance) / 100,
+            # Fix: savings = what you earned minus what you spent this month
+            "total_savings": (curr_income - curr_expense) / 100,
             "income_change_pct": pct_change(curr_income, prev_income),
             "expense_change_pct": pct_change(curr_expense, prev_expense),
         }

@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { AddTransactionModal, InitialTransactionData } from "@/components/forms/add-transaction-modal"
 
 // ================================
 // Insights Section
@@ -61,12 +62,10 @@ function InsightsSection() {
 // ================================
 // OCR Receipt Scanner Section
 // ================================
-function OCRSection({ onUseData }: { onUseData: (data: any) => void }) {
+function OCRSection({ onUseData }: { onUseData: (data: InitialTransactionData) => void }) {
     const [scanning, setScanning] = useState(false)
     const [result, setResult] = useState<any>(null)
     const fileRef = useRef<HTMLInputElement>(null)
-    const [addTransactionData, setAddTransactionData] = useState<any>(null)
-    const [addOpen, setAddOpen] = useState(false)
 
     const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -179,14 +178,18 @@ function OCRSection({ onUseData }: { onUseData: (data: any) => void }) {
                                 </div>
                             )}
 
-                            <Button size="sm" className="w-full" onClick={() => {
-                                onUseData({
-                                    description: result.merchant || "",
-                                    amount: result.amount || 0,
-                                    date: result.date || new Date().toISOString().split("T")[0],
-                                    category_hint: result.category_hint,
-                                })
-                            }}>
+                            <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => {
+                                    onUseData({
+                                        description: result.merchant || "",
+                                        amount: result.amount || undefined,
+                                        date: result.date || new Date().toISOString().split("T")[0],
+                                        category_hint: result.category_hint,
+                                    })
+                                }}
+                            >
                                 Use This Data to Add Transaction
                             </Button>
                         </Card>
@@ -354,6 +357,11 @@ function ChatSection() {
 export default function AIInsightsPage() {
     const [activeTab, setActiveTab] = useState<"insights" | "chat" | "ocr">("insights")
 
+    // State for the Add Transaction modal, opened from OCR scan results.
+    // Lives at the page level so it can be triggered from inside OCRSection.
+    const [addOpen, setAddOpen] = useState(false)
+    const [addTransactionData, setAddTransactionData] = useState<InitialTransactionData | null>(null)
+
     const tabs = [
         { id: "insights", label: "Insights", icon: TrendingUp },
         { id: "chat", label: "Chat", icon: Bot },
@@ -407,20 +415,28 @@ export default function AIInsightsPage() {
                         {activeTab === "insights" && <InsightsSection />}
                         {activeTab === "chat" && <ChatSection />}
 
-                        {/* FIXED: Pass a handler function to the OCRSection */}
                         {activeTab === "ocr" && (
                             <OCRSection
                                 onUseData={(extractedData) => {
-                                    console.log("Extracted Receipt Data:", extractedData)
-                                    // TODO: Map this data to your state, form, or context 
-                                    // e.g., setAddTransactionData(extractedData); setAddOpen(true);
-                                    toast.info("Data captured! Integrating with form...")
+                                    // Real integration — open Add Transaction modal pre-filled
+                                    // with the scanned receipt data, instead of just logging it
+                                    setAddTransactionData(extractedData)
+                                    setAddOpen(true)
                                 }}
                             />
                         )}
                     </motion.div>
                 </AnimatePresence>
             </Card>
+
+            <AddTransactionModal
+                open={addOpen}
+                onOpenChange={(open) => {
+                    setAddOpen(open)
+                    if (!open) setAddTransactionData(null)
+                }}
+                initialData={addTransactionData}
+            />
         </div>
     )
 }

@@ -551,34 +551,46 @@ function RecentTransactions({ symbol }: { symbol: string }) {
 
   return (
     <div className="space-y-2">
-      {transactions.map((t) => (
-        <div
-          key={t.id}
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-        >
+      {transactions.map((t) => {
+        // Color logic — income green, expense red, transfer orange
+        const amountColor =
+          t.transaction_type === "income"
+            ? "text-green-600 dark:text-green-400"
+            : t.transaction_type === "transfer"
+              ? "text-orange-500 dark:text-orange-400"
+              : "text-red-600 dark:text-red-400"
+
+        // Prefix — income gets +, expense gets -, transfer gets →
+        const prefix =
+          t.transaction_type === "income" ? "+" :
+            t.transaction_type === "transfer" ? "→" : "-"
+
+        return (
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
-            style={{ backgroundColor: `${t.category_color}20` }}
+            key={t.id}
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
           >
-            {t.category_icon ?? "📦"}
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
+              style={{ backgroundColor: `${t.category_color ?? "#94A3B8"}20` }}
+            >
+              {t.category_icon ?? "📦"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{t.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {t.category_name ?? "Uncategorized"} · {t.date}
+                {t.transaction_type === "transfer" && (
+                  <span className="ml-1 text-orange-500">· Transfer</span>
+                )}
+              </p>
+            </div>
+            <span className={`text-sm font-semibold flex-shrink-0 ${amountColor}`}>
+              {prefix}{symbol}{t.amount_display.toLocaleString("en-IN")}
+            </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{t.description}</p>
-            <p className="text-xs text-muted-foreground">
-              {t.category_name ?? "Uncategorized"} · {t.date}
-            </p>
-          </div>
-          <span
-            className={`text-sm font-semibold flex-shrink-0 ${t.transaction_type === "income"
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-              }`}
-          >
-            {t.transaction_type === "income" ? "+" : "-"}
-            {symbol}{t.amount_display.toLocaleString("en-IN")}
-          </span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -709,7 +721,7 @@ export default function DashboardPage() {
       bg: "bg-red-500/10",
     },
     {
-      label: "Total Savings",
+      label: "Monthly Savings",
       value: formatAmount(summary?.total_savings ?? 0),
       change: "+0%",
       trend: "up" as const,
@@ -805,6 +817,9 @@ export default function DashboardPage() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Spending Breakdown</h3>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/analytics">View all</Link>
+            </Button>
           </div>
           <SpendingBreakdown symbol={symbol} />
         </Card>

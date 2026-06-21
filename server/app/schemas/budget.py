@@ -12,8 +12,6 @@ class BudgetCreate(BaseModel):
     amount: int                          # in paise
     period: BudgetPeriod = BudgetPeriod.MONTHLY
     category_id: Optional[UUID] = None
-    month: Optional[int] = None
-    year: Optional[int] = None
     alert_threshold: int = 80
 
     @field_validator("amount")

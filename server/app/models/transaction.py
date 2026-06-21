@@ -25,6 +25,7 @@ class PaymentMethod(str, enum.Enum):
     UPI = "upi"
     CARD = "card"
     NET_BANKING = "net_banking"
+    BANK = "bank"
     WALLET = "wallet"
     OTHER = "other"
 
