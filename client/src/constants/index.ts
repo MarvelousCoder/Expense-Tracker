@@ -1,6 +1,6 @@
 // src/constants/index.ts
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Expense_Tracker"
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "TrackWise"
 
 export const ROUTES = {
     HOME: "/",

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # ================================
     # APP
     # ================================
-    APP_NAME: str = "Expense_Tracker"
+    APP_NAME: str = "TrackWise"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True

@@ -56,8 +56,8 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Expense-Tracker — Smart Personal Finance",
-    template: "%s | Expense_Tracker",
+    default: "TrackWise — Smart Personal Finance",
+    template: "%s | TrackWise",
   },
   description: "AI-powered personal expense tracker platform",
 }
