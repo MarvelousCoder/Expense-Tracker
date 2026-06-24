@@ -68,7 +68,7 @@ Expense Tracker/
     │   └── schemas/                # Pydantic v2 schemas
     └── alembic/                    # Database migrations
 
----
+
 ```
 ## Getting Started
 
