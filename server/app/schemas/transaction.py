@@ -73,3 +73,44 @@ class DashboardSummary(BaseModel):
     total_savings: float
     income_change_pct: float = 0.0
     expense_change_pct: float = 0.0
+
+# ================================
+# Bulk Import
+# ================================
+class BulkTransactionItem(BaseModel):
+    account_id: UUID
+    amount: int                    # in paise — already converted by frontend
+    transaction_type: TransactionType
+    payment_method: PaymentMethod = PaymentMethod.BANK
+    description: str
+    date: date_type
+    notes: Optional[str] = None
+    category_id: Optional[UUID] = None
+    is_recurring: bool = False
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("Amount must be greater than zero")
+        return v
+
+
+class BulkTransactionCreate(BaseModel):
+    transactions: List[BulkTransactionItem]
+
+    @field_validator("transactions")
+    @classmethod
+    def not_empty(cls, v: list) -> list:
+        if not v:
+            raise ValueError("At least one transaction is required")
+        if len(v) > 500:
+            raise ValueError("Cannot import more than 500 transactions at once")
+        return v
+
+
+class BulkTransactionResponse(BaseModel):
+    imported: int
+    failed: int
+    total: int
+    message: str

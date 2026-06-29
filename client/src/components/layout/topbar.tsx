@@ -14,11 +14,11 @@ import {
     DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-    Sheet, SheetContent, SheetTrigger,
+    Sheet, SheetContent, SheetTrigger, SheetTitle,
 } from "@/components/ui/sheet"
 import {
-    Bell, Menu, LogOut, User,
-    Settings, TrendingUp,
+    Bell, Menu, LogOut,
+    Settings, TrendingUp, AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { APP_NAME } from "@/constants"
+import { useBudgets } from "@/hooks/useBudgets"
 
 const iconMap = {
     LayoutDashboard, ArrowLeftRight, Target,
@@ -40,6 +41,7 @@ interface TopbarProps {
 export function Topbar({ onLogout }: TopbarProps) {
     const pathname = usePathname()
     const { user } = useAuthStore()
+    const { data: budgets = [] } = useBudgets()
 
     const currentPage = NAV_ITEMS.find(
         (item) => pathname === item.href ||
@@ -54,6 +56,10 @@ export function Topbar({ onLogout }: TopbarProps) {
         .slice(0, 2) ?? "U"
 
     const currencySymbol = user?.currency === "USD" ? "$" : "₹"
+
+    // Budget alerts — budgets that have crossed their alert threshold or exceeded limit
+    const alertBudgets = budgets.filter((b) => b.is_alert || b.is_exceeded)
+    const alertCount = alertBudgets.length
 
     return (
         <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40 flex items-center px-4 md:px-6 gap-4">
@@ -121,10 +127,79 @@ export function Topbar({ onLogout }: TopbarProps) {
                 <ThemeToggle />
 
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" className="relative rounded-full w-9 h-9">
+                {/* <Button variant="ghost" size="icon" className="relative rounded-full w-9 h-9">
                     <Bell className="h-4 w-4" />
                     <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />
-                </Button>
+                </Button> */}
+                {/* Notification bell — wired to budget alerts */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="relative rounded-full w-9 h-9">
+                            <Bell className="h-4 w-4" />
+                            {alertCount > 0 && (
+                                <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] font-bold flex items-center justify-center">
+                                    {alertCount > 9 ? "9+" : alertCount}
+                                </span>
+                            )}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-72">
+                        <DropdownMenuLabel className="font-medium">
+                            Budget Alerts
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {alertCount === 0 ? (
+                            <div className="px-3 py-4 text-center">
+                                <p className="text-sm text-muted-foreground">
+                                    All budgets are on track
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                {alertBudgets.map((budget) => (
+                                    <DropdownMenuItem key={budget.id} asChild>
+                                        <Link href="/budgets" className="cursor-pointer">
+                                            <div className="flex items-start gap-2.5 w-full py-0.5">
+                                                <div
+                                                    className="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 mt-0.5"
+                                                    style={{ backgroundColor: `${budget.category_color ?? "#6366F1"}20` }}
+                                                >
+                                                    {budget.category_icon ?? "💰"}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">
+                                                        {budget.name}
+                                                    </p>
+                                                    <p className={cn(
+                                                        "text-xs",
+                                                        budget.is_exceeded
+                                                            ? "text-destructive"
+                                                            : "text-yellow-600 dark:text-yellow-500"
+                                                    )}>
+                                                        {budget.is_exceeded
+                                                            ? `Exceeded by ₹${(budget.spent - budget.amount_display).toLocaleString("en-IN")}`
+                                                            : `${budget.percentage}% of budget used`
+                                                        }
+                                                    </p>
+                                                </div>
+                                                <AlertTriangle className={cn(
+                                                    "w-3.5 h-3.5 flex-shrink-0 mt-1",
+                                                    budget.is_exceeded ? "text-destructive" : "text-yellow-500"
+                                                )} />
+                                            </div>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/budgets" className="cursor-pointer text-sm text-muted-foreground justify-center">
+                                        View all budgets
+                                    </Link>
+                                </DropdownMenuItem>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* User menu */}
                 <DropdownMenu>
@@ -147,14 +222,8 @@ export function Topbar({ onLogout }: TopbarProps) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                             <Link href="/settings" className="cursor-pointer">
-                                <User className="mr-2 h-4 w-4" />
-                                Profile
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href="/settings" className="cursor-pointer">
                                 <Settings className="mr-2 h-4 w-4" />
-                                Settings
+                                Account Settings
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />

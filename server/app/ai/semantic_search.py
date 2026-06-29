@@ -33,7 +33,7 @@ from app.ai.embeddings import generate_query_embedding, embed_transaction
 logger = logging.getLogger(__name__)
 
 # Results below this similarity score are considered irrelevant
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.65
 
 # Default max results returned
 DEFAULT_LIMIT = 10
@@ -140,7 +140,7 @@ async def semantic_search(
             "description":     row.description,
             "amount":          row.amount,
             "amount_display":  row.amount / 100,
-            "transaction_type": row.transaction_type,
+            "transaction_type": row.transaction_type.lower() if isinstance(row.transaction_type, str) else row.transaction_type.value,
             "payment_method":  row.payment_method,
             "date":            str(row.date),
             "category_name":   cat.name if cat else None,

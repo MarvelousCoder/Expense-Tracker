@@ -28,6 +28,36 @@ export interface ChatResponse {
     response: string
 }
 
+export interface SemanticSearchResult {
+    id: string
+    description: string
+    amount: number
+    amount_display: number
+    transaction_type: string
+    payment_method: string
+    date: string
+    category_name: string | null
+    category_icon: string | null
+    category_color: string | null
+    is_recurring: boolean
+    anomaly_score: number | null
+    notes: string | null
+    similarity_score: number
+}
+
+export interface SemanticSearchResponse {
+    results: SemanticSearchResult[]
+    query: string
+    total: number
+}
+
+export interface BackfillResponse {
+    processed: number
+    failed: number
+    remaining: number
+    message: string
+}
+
 export const aiService = {
     categorize: (description: string, amount: number) =>
         api.post<CategorizeResponse>("/ai/categorize", { description, amount }),
@@ -52,4 +82,18 @@ export const aiService = {
 
     chat: (message: string, history: { role: string; content: string }[] = []) =>
         api.post<ChatResponse>("/ai/chat", { message, history }),
+
+    // Search transactions by meaning, not just keywords.
+    // Requires transactions to have embeddings — call backfill() first for existing ones.
+    search: (query: string, transaction_type?: string, limit: number = 10) =>
+        api.post<SemanticSearchResponse>("/ai/search", {
+            query,
+            ...(transaction_type ? { transaction_type } : {}),
+            limit,
+        }),
+
+    // Embed all existing transactions so they become searchable.
+    // New transactions are embedded automatically on creation.
+    // Safe to call multiple times — only processes un-embedded transactions.
+    backfill: () => api.post<BackfillResponse>("/ai/search/backfill", {}),
 }

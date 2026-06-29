@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { aiService } from "@/services/ai.service"
+import { aiService, SemanticSearchResult } from "@/services/ai.service"
 import { useAuthStore } from "@/store/auth.store"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
     Sparkles, Send, Upload, Bot,
     User, Loader2, ReceiptText, TrendingUp,
+    Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -352,10 +353,203 @@ function ChatSection() {
 }
 
 // ================================
+// Semantic Search Section
+// ================================
+function SemanticSearchSection() {
+    const { user } = useAuthStore()
+    const symbol = user?.currency === "USD" ? "$" : "₹"
+
+    const [query, setQuery] = useState("")
+    const [searching, setSearching] = useState(false)
+    const [backfilling, setBackfilling] = useState(false)
+    const [results, setResults] = useState<SemanticSearchResult[] | null>(null)
+    const [searchedQuery, setSearchedQuery] = useState("")
+
+    const handleSearch = async () => {
+        if (!query.trim()) return
+        setSearching(true)
+        setResults(null)
+        try {
+            const data = await aiService.search(query.trim())
+            setResults(data.results)
+            setSearchedQuery(query.trim())
+        } catch {
+            toast.error("Search failed. Try running backfill first if this is your first time using semantic search.")
+        } finally {
+            setSearching(false)
+        }
+    }
+
+    const handleBackfill = async () => {
+        setBackfilling(true)
+        try {
+            const data = await aiService.backfill()
+            toast.success(data.message)
+        } catch {
+            toast.error("Backfill failed. Please try again.")
+        } finally {
+            setBackfilling(false)
+        }
+    }
+
+    return (
+        <div className="space-y-5">
+            {/* Explanation */}
+            <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                <p className="text-sm font-medium mb-1">Search by meaning, not keywords</p>
+                <p className="text-xs text-muted-foreground">
+                    Type anything — "coffee shop visits", "online subscriptions", "medical expenses" —
+                    and TrackWise finds semantically related transactions even if the words don't match exactly.
+                </p>
+            </div>
+
+            {/* Search input */}
+            <div className="flex gap-2">
+                <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder="e.g. food delivery, transport, subscriptions..."
+                    className="flex-1"
+                    disabled={searching}
+                />
+                <Button onClick={handleSearch} disabled={!query.trim() || searching}>
+                    {searching
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Search className="w-4 h-4" />
+                    }
+                </Button>
+            </div>
+
+            {/* Results */}
+            <AnimatePresence mode="wait">
+                {searching && (
+                    <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <div className="space-y-3">
+                            {Array(3).fill(0).map((_, i) => (
+                                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
+                {!searching && results !== null && results.length === 0 && (
+                    <motion.div
+                        key="empty"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-center py-10"
+                    >
+                        <p className="text-sm font-medium mb-1">No matches found</p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            No transactions matched "{searchedQuery}". If you haven't run backfill yet,
+                            older transactions may not be searchable.
+                        </p>
+                    </motion.div>
+                )}
+
+                {!searching && results && results.length > 0 && (
+                    <motion.div
+                        key="results"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-2"
+                    >
+                        <p className="text-xs text-muted-foreground mb-3">
+                            {results.length} result{results.length !== 1 ? "s" : ""} for "{searchedQuery}"
+                        </p>
+                        {results.map((result, i) => {
+                            const amountColor =
+                                result.transaction_type === "income"
+                                    ? "text-green-600 dark:text-green-400"
+                                    : result.transaction_type === "transfer"
+                                        ? "text-orange-500 dark:text-orange-400"
+                                        : "text-red-600 dark:text-red-400"
+
+                            const prefix =
+                                result.transaction_type === "income" ? "+" :
+                                    result.transaction_type === "transfer" ? "→" : "-"
+
+                            const similarityPct = Math.round(result.similarity_score * 100)
+
+                            return (
+                                <motion.div
+                                    key={result.id}
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.04 }}
+                                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+                                >
+                                    {/* Category icon */}
+                                    <div
+                                        className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
+                                        style={{ backgroundColor: `${result.category_color ?? "#94A3B8"}20` }}
+                                    >
+                                        {result.category_icon ?? "📦"}
+                                    </div>
+
+                                    {/* Description + meta */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">{result.description}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <p className="text-xs text-muted-foreground">
+                                                {result.category_name ?? "Uncategorized"} · {result.date}
+                                            </p>
+                                            {/* Similarity bar */}
+                                            <div className="flex items-center gap-1 ml-auto">
+                                                <div className="w-16 bg-muted rounded-full h-1">
+                                                    <div
+                                                        className="h-1 rounded-full bg-primary"
+                                                        style={{ width: `${similarityPct}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-muted-foreground tabular-nums">
+                                                    {similarityPct}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Amount */}
+                                    <span className={`text-sm font-semibold flex-shrink-0 ${amountColor}`}>
+                                        {prefix}{symbol}{result.amount_display.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                    </span>
+                                </motion.div>
+                            )
+                        })}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Backfill section — always visible at the bottom */}
+            <div className="pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-2">
+                    First time using semantic search? Run backfill to make your existing transactions searchable.
+                    New transactions are indexed automatically.
+                </p>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBackfill}
+                    disabled={backfilling}
+                >
+                    {backfilling
+                        ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Running backfill...</>
+                        : "Run Backfill"
+                    }
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// ================================
 // Main Page
 // ================================
 export default function AIInsightsPage() {
-    const [activeTab, setActiveTab] = useState<"insights" | "chat" | "ocr">("insights")
+    const [activeTab, setActiveTab] = useState<"insights" | "chat" | "ocr"| "search">("insights")
 
     // State for the Add Transaction modal, opened from OCR scan results.
     // Lives at the page level so it can be triggered from inside OCRSection.
@@ -366,6 +560,7 @@ export default function AIInsightsPage() {
         { id: "insights", label: "Insights", icon: TrendingUp },
         { id: "chat", label: "Chat", icon: Bot },
         { id: "ocr", label: "Receipt Scanner", icon: ReceiptText },
+        { id: "search", label: "Smart Search", icon: Search },
     ] as const
 
     return (
@@ -425,6 +620,7 @@ export default function AIInsightsPage() {
                                 }}
                             />
                         )}
+                        {activeTab === "search" && <SemanticSearchSection />}
                     </motion.div>
                 </AnimatePresence>
             </Card>

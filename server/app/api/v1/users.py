@@ -1,13 +1,17 @@
 # app/api/v1/users.py
 
+from sqlalchemy import update
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.user import UserResponse, UserUpdate
+from app.schemas.user import ChangePasswordRequest, UserResponse, UserUpdate
 from app.repositories.user_repository import UserRepository
+from app.core.security import hash_password, verify_password
+
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -57,6 +61,29 @@ async def update_me(
     refreshed = result.scalar_one()
     return refreshed
 
+
+# ================================
+# POST /me/change-password
+# ================================
+@router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify current password is correct before allowing change
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    await db.execute(
+        update(User)
+        .where(User.id == current_user.id)
+        .values(hashed_password=hash_password(data.new_password))
+    )
+    await db.flush()
 
 # ================================
 # DELETE /me — soft delete account

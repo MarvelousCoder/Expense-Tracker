@@ -23,11 +23,13 @@ import {
   Plus, Search, Download, MoreHorizontal,
   Trash2, ChevronLeft, ChevronRight,
   Pencil,
+  Upload,
 } from "lucide-react"
 import { transactionService } from "@/services/transaction.service"
 import { format } from "date-fns"
 import { EditTransactionModal } from "@/components/forms/edit-transaction-modal"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ImportCSVModal } from "@/components/forms/import-csv-modal"
 
 
 // ─── Delete Confirmation Dialog ────────────────────────────────────────────────
@@ -76,6 +78,7 @@ export default function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const symbol = user?.currency === "USD" ? "$" : "₹"
+  const [importOpen, setImportOpen] = useState(false)
 
   const { data, isLoading } = useTransactions({
     page,
@@ -218,6 +221,10 @@ export default function TransactionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
+          </Button>
           <Button variant="outline" size="sm" onClick={transactionService.exportCSV}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
@@ -346,6 +353,8 @@ export default function TransactionsPage() {
         transaction={editingTransaction}
         onOpenChange={(open) => { if (!open) setEditingTransaction(null) }}
       />
+
+      <ImportCSVModal open={importOpen} onOpenChange={setImportOpen} />
 
       <DeleteTransactionDialog
         transaction={deletingTransaction}

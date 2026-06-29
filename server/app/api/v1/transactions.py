@@ -846,7 +846,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.schemas.transaction import (
-    TransactionCreate, TransactionUpdate,
+    BulkTransactionCreate, TransactionCreate, TransactionUpdate,
     TransactionResponse, TransactionListResponse, DashboardSummary
 )
 from app.repositories.transaction_repository import TransactionRepository
@@ -1080,6 +1080,53 @@ async def export_transactions_csv(
         headers={"Content-Disposition": "attachment; filename=transactions.csv"}
     )
 
+# ================================
+# POST — Bulk Import Transactions
+# NOTE: Must stay ABOVE /{transaction_id} routes
+# ================================
+@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+async def bulk_create_transactions(
+    data: BulkTransactionCreate,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from app.schemas.transaction import BulkTransactionResponse
+
+    repo = TransactionRepository(db)
+    imported = 0
+    failed = 0
+
+    for item in data.transactions:
+        try:
+            transaction_data = TransactionCreate(
+                account_id=item.account_id,
+                amount=item.amount,
+                transaction_type=item.transaction_type,
+                payment_method=item.payment_method,
+                description=item.description,
+                date=item.date,
+                notes=item.notes,
+                category_id=item.category_id,
+                is_recurring=item.is_recurring,
+            )
+            await repo.create(current_user.id, transaction_data)
+            imported += 1
+        except Exception:
+            failed += 1
+            continue
+
+    # Invalidate cache since balances and dashboard have changed
+    await cache_delete_pattern(f"dashboard:{current_user.id}*")
+    await cache_delete_pattern(f"analytics:{current_user.id}*")
+
+    return BulkTransactionResponse(
+        imported=imported,
+        failed=failed,
+        total=len(data.transactions),
+        message=f"Successfully imported {imported} of {len(data.transactions)} transactions."
+        + (f" {failed} failed." if failed else "")
+    )
 
 # ================================
 # GET — List Transactions
