@@ -5,7 +5,7 @@ from sqlalchemy import select, update, func, and_, extract
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 from app.models.budget import Budget, BudgetPeriod
 from app.models.transaction import Transaction, TransactionType
@@ -125,44 +125,70 @@ class BudgetRepository:
 
     def _get_period_date_range(self, period: BudgetPeriod) -> tuple[datetime, datetime]:
         """
-        Compute start and end datetimes for the current period window.
+        Compute start and end DATE objects for the current period window.
+        Returns date (not datetime) so comparisons work correctly against
+        Transaction.date (a Date column) in both PostgreSQL and SQLite.
         Always uses NOW so old transactions are always included — no stale month/year.
         """
         now = datetime.now(timezone.utc)
+        today = now.date()
 
         if period == BudgetPeriod.WEEKLY:
             # Monday to Sunday of the current ISO week
-            start = now - timedelta(days=now.weekday())
-            start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+            # start = now - timedelta(days=now.weekday())
+            # start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+            # end = start + timedelta(days=7)
+            start = today - timedelta(days=today.weekday())
             end = start + timedelta(days=7)
 
+        # elif period == BudgetPeriod.YEARLY:
+        #     start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        #     end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
         elif period == BudgetPeriod.YEARLY:
-            start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-            end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+            start = today.replace(month=1, day=1)
+            end = today.replace(month=12, day=31)
+
+        # else:
+        #     # MONTHLY — default
+        #     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        #     # First day of next month
+        #     if now.month == 12:
+        #         end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        #     else:
+        #         end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # return start, end  
 
         else:
             # MONTHLY — default
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            start = today.replace(day=1)
             # First day of next month
-            if now.month == 12:
-                end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            if today.month == 12:
+                end = today.replace(year=today.year + 1, month=1, day=1)
             else:
-                end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+                end = today.replace(month=today.month + 1, day=1)
 
-        return start, end    
+        return start, end  
 
     async def _enrich(self, budget: Budget, user_id: UUID) -> BudgetResponse:
             """
-            Calculate spent amount dynamically based on period.
-            Always computes the current window from NOW — never trusts stored month/year.
-            This means old transactions are always included correctly.
-            """
+        Calculate spent amount dynamically based on period.
+        Always computes the current window from NOW — never trusts stored month/year.
+        This means old transactions are always included correctly.
+
+        Includes both EXPENSE and TRANSFER transaction types — transfers
+        reduce your spendable balance just like expenses, consistent with
+        how they are treated in the dashboard and analytics.
+        """
             start, end = self._get_period_date_range(budget.period)
 
             conditions = [
                 Transaction.user_id == user_id,
                 Transaction.deleted_at.is_(None),
-                Transaction.transaction_type == TransactionType.EXPENSE,
+                Transaction.transaction_type.in_([
+                TransactionType.EXPENSE,
+                TransactionType.TRANSFER,
+            ]),
                 Transaction.date >= start,
                 Transaction.date < end,
             ]
