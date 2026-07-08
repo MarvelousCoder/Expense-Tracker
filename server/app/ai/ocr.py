@@ -1,12 +1,12 @@
 # app/ai/ocr.py
 
-import base64
 import json
 import logging
 import re
-from typing import Optional
+
 from google import genai
 from google.genai import types
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)

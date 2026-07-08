@@ -1,15 +1,16 @@
 # app/repositories/budget_repository.py
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, and_, extract
-from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from uuid import UUID
-from datetime import datetime, timedelta, timezone, date
+
+from sqlalchemy import and_, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.budget import Budget, BudgetPeriod
 from app.models.transaction import Transaction, TransactionType
-from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
+from app.schemas.budget import BudgetCreate, BudgetResponse, BudgetUpdate
 
 
 class BudgetRepository:
@@ -66,7 +67,7 @@ class BudgetRepository:
         conditions = [
             Budget.user_id == user_id,
             Budget.period == period,
-            Budget.is_active == True,
+            Budget.is_active is True,
         ]
 
         if category_id is None:
@@ -82,13 +83,13 @@ class BudgetRepository:
         )
         return result.scalar_one_or_none() is not None
 
-    async def get_all(self, user_id: UUID) -> List[BudgetResponse]:
+    async def get_all(self, user_id: UUID) -> list[BudgetResponse]:
         result = await self.db.execute(
             select(Budget)
             .options(selectinload(Budget.category))
             .where(
                 Budget.user_id == user_id,
-                Budget.is_active == True
+                Budget.is_active is True
             )
             .order_by(Budget.created_at.desc())
         )
@@ -157,7 +158,7 @@ class BudgetRepository:
         #     else:
         #         end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # return start, end  
+        # return start, end
 
         else:
             # MONTHLY — default
@@ -168,7 +169,7 @@ class BudgetRepository:
             else:
                 end = today.replace(month=today.month + 1, day=1)
 
-        return start, end  
+        return start, end
 
     async def _enrich(self, budget: Budget, user_id: UUID) -> BudgetResponse:
             """

@@ -15,19 +15,18 @@
 # 5. Store anomaly_score on the transaction row
 
 import logging
-import json
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import numpy as np
-from sqlalchemy import select, func, extract
-from sqlalchemy.ext.asyncio import AsyncSession
 from groq import Groq
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.transaction import Transaction, TransactionType
 from app.models.category import Category
+from app.models.transaction import Transaction, TransactionType
 
 logger = logging.getLogger(__name__)
 

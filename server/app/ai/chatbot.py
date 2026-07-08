@@ -3,14 +3,16 @@
 import json
 import logging
 from datetime import datetime, timezone
-from groq import Groq
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract, and_
-from app.core.config import settings
-from app.models.transaction import Transaction, TransactionType
-from app.models.category import Category
-from app.models.account import Account
 from uuid import UUID
+
+from groq import Groq
+from sqlalchemy import extract, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.account import Account
+from app.models.category import Category
+from app.models.transaction import Transaction, TransactionType
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +77,7 @@ async def _get_financial_summary(db: AsyncSession, user_id: UUID) -> dict:
         .where(
             Account.user_id == user_id,
             Account.deleted_at.is_(None),
-            Account.is_active == True
+            Account.is_active is True
         )
     )
     accounts = [

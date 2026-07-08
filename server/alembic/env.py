@@ -1,24 +1,27 @@
 # alembic/env.py
 
 import asyncio
+import os
+import sys
 from logging.config import fileConfig
+
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from alembic import context
-import sys
-import os
 
 # Add server/ to Python path so we can import app modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import settings
 from app.core.database import Base
-from app.models.user import User
 from app.models.account import Account
+from app.models.budget import Budget
 from app.models.category import Category
 from app.models.transaction import Transaction
-from app.models.budget import Budget
+from app.models.user import User
+
 # Import all models here so Alembic can detect them
 # We'll add more as we create them
 # from app.models.user import User  ← uncomment when model exists

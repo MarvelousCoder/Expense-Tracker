@@ -1,16 +1,25 @@
 # app/models/transaction.py
 
+import enum
+import uuid
+
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Column, String, Boolean, DateTime,
-    Enum as SQLEnum, ForeignKey, BigInteger,
-    Text, Date, Float
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    String,
+    Text,
 )
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from pgvector.sqlalchemy import Vector
-import uuid
-import enum
+
 from app.core.database import Base
 
 
@@ -76,7 +85,7 @@ class Transaction(Base):
     # 0.5+  = mildly unusual
     # 1.0+  = significantly anomalous (more than 2 std deviations above mean)
     anomaly_score = Column(Float, nullable=True)
-    
+
 
     # Flags
     is_recurring = Column(Boolean, default=False, nullable=False)

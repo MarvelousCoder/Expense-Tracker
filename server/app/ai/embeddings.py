@@ -17,8 +17,8 @@ from typing import Optional
 from uuid import UUID
 
 import google.generativeai as genai
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.transaction import Transaction

@@ -3,7 +3,6 @@
 # Tests for password hashing and verification —
 # the foundation of the entire auth system.
 
-import pytest
 from app.core.security import hash_password, verify_password
 
 

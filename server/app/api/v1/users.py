@@ -1,17 +1,15 @@
 # app/api/v1/users.py
 
-from sqlalchemy import update
-
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
-from app.models.user import User
-from app.schemas.user import ChangePasswordRequest, UserResponse, UserUpdate
-from app.repositories.user_repository import UserRepository
 from app.core.security import hash_password, verify_password
-
+from app.models.user import User
+from app.repositories.user_repository import UserRepository
+from app.schemas.user import ChangePasswordRequest, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -54,6 +52,7 @@ async def update_me(
 
     # Refresh to load all attributes within session
     from sqlalchemy import select
+
     from app.models.user import User as UserModel
     result = await db.execute(
         select(UserModel).where(UserModel.id == updated_user.id)

@@ -552,8 +552,9 @@ export function ImportCSVModal({ open, onOpenChange }: Props) {
                     {step === "Map Columns" && (
                         <div className="space-y-4">
                             <p className="text-xs text-muted-foreground">
-                                We auto-detected column mappings based on your bank's header names.
-                                Review and adjust if anything looks wrong.
+                                {/* We auto-detected column mappings based on your bank's header names.
+                                Review and adjust if anything looks wrong. */}
+                                We auto-detected column mappings based on your bank&apos;s header names.
                             </p>
 
                             {/* Mode toggle */}

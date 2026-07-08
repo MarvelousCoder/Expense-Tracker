@@ -1,14 +1,14 @@
 # app/models/user.py
 
-from sqlalchemy import (
-    Column, String, Boolean, DateTime,
-    Enum as SQLEnum, Text
-)
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-import uuid
 import enum
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, String, Text
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
 from app.core.database import Base
 
 

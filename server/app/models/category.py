@@ -1,13 +1,12 @@
 # app/models/category.py
 
-from sqlalchemy import (
-    Column, String, Boolean, DateTime,
-    ForeignKey, Text
-)
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
+
 from app.core.database import Base
 
 

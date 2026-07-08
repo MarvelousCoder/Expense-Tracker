@@ -66,7 +66,7 @@
 #                 status_code=status.HTTP_403_FORBIDDEN,
 #                 detail="Account is deactivated"
 #             )
-        
+
 #         # Use returned user — all attributes loaded within session
 #         refreshed_user = await self.user_repo.update_last_login(user.id)
 
@@ -126,16 +126,22 @@
 # NOTE: 2nd change
 # app/services/auth_service.py
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
-
-from app.repositories.user_repository import UserRepository
-from app.repositories.account_repository import AccountRepository
-from app.schemas.user import UserCreate, TokenResponse, UserResponse, LoginRequest
-from app.schemas.account import AccountCreate
-from app.core.security import verify_password, create_access_token, create_refresh_token, decode_token
-from app.models.account import AccountType
 import logging
+
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    verify_password,
+)
+from app.models.account import AccountType
+from app.repositories.account_repository import AccountRepository
+from app.repositories.user_repository import UserRepository
+from app.schemas.account import AccountCreate
+from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserResponse
 
 
 class AuthService:
@@ -184,7 +190,7 @@ class AuthService:
             )
             await self.account_repo.create(user.id, default_account)
             await self.db.commit()
-        except Exception:
+        except Exception as e:
             # Account creation failure must never block registration
             # User can create accounts manually if this fails
             logging.getLogger(__name__).error(f"Auto account creation failed: {e}")

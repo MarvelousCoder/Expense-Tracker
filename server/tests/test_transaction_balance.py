@@ -5,14 +5,15 @@
 # editing a transaction's amount/type must correctly recalculate
 # the account balance using a single net-delta SQL update.
 
-import pytest
 from datetime import date
 
-from app.models.transaction import TransactionType
-from app.models.account import Account
-from app.schemas.transaction import TransactionCreate, TransactionUpdate
-from app.repositories.transaction_repository import TransactionRepository
+import pytest
 from sqlalchemy import select
+
+from app.models.account import Account
+from app.models.transaction import TransactionType
+from app.repositories.transaction_repository import TransactionRepository
+from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
 @pytest.mark.asyncio

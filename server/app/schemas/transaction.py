@@ -1,17 +1,20 @@
 # app/schemas/transaction.py
 
-from pydantic import BaseModel, field_validator
-from typing import Optional, List
-from datetime import datetime, date as date_type
+from datetime import date as date_type
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
-from app.models.transaction import TransactionType, PaymentMethod
+
+from pydantic import BaseModel, field_validator
+
+from app.models.transaction import PaymentMethod, TransactionType
 
 
 class TransactionBase(BaseModel):
     amount: int
     # Amount in paise/cents — frontend sends 50000 for ₹500.00
     transaction_type: TransactionType
-    payment_method: PaymentMethod 
+    payment_method: PaymentMethod
     description: str
     notes: Optional[str] = None
     date: date_type
@@ -59,7 +62,7 @@ class TransactionResponse(TransactionBase):
 
 
 class TransactionListResponse(BaseModel):
-    items: List[TransactionResponse]
+    items: list[TransactionResponse]
     total: int
     page: int
     per_page: int
@@ -97,7 +100,7 @@ class BulkTransactionItem(BaseModel):
 
 
 class BulkTransactionCreate(BaseModel):
-    transactions: List[BulkTransactionItem]
+    transactions: list[BulkTransactionItem]
 
     @field_validator("transactions")
     @classmethod

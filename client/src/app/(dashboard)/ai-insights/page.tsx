@@ -398,8 +398,10 @@ function SemanticSearchSection() {
             <div className="p-4 rounded-lg bg-muted/50 border border-border">
                 <p className="text-sm font-medium mb-1">Search by meaning, not keywords</p>
                 <p className="text-xs text-muted-foreground">
-                    Type anything — "coffee shop visits", "online subscriptions", "medical expenses" —
-                    and TrackWise finds semantically related transactions even if the words don't match exactly.
+                    {/* Type anything — "coffee shop visits", "online subscriptions", "medical expenses" —
+                    and TrackWise finds semantically related transactions even if the words don't match exactly. */}
+                    Type anything — &quot;coffee shop visits&quot;, &quot;online subscriptions&quot;, &quot;medical expenses&quot; —
+                    and TrackWise finds semantically related transactions even if the words don&apos;t match exactly.
                 </p>
             </div>
 
@@ -443,8 +445,9 @@ function SemanticSearchSection() {
                     >
                         <p className="text-sm font-medium mb-1">No matches found</p>
                         <p className="text-xs text-muted-foreground mb-4">
-                            No transactions matched "{searchedQuery}". If you haven't run backfill yet,
-                            older transactions may not be searchable.
+                            {/* No transactions matched "{searchedQuery}". If you haven't run backfill yet,
+                            older transactions may not be searchable. */}
+                            No transactions matched &quot;{searchedQuery}&quot;. If you haven&apos;t run backfill yet,
                         </p>
                     </motion.div>
                 )}
@@ -458,7 +461,8 @@ function SemanticSearchSection() {
                         className="space-y-2"
                     >
                         <p className="text-xs text-muted-foreground mb-3">
-                            {results.length} result{results.length !== 1 ? "s" : ""} for "{searchedQuery}"
+                            {/* {results.length} result{results.length !== 1 ? "s" : ""} for "{searchedQuery}" */}
+                            {results.length} result{results.length !== 1 ? "s" : ""} for &quot;{searchedQuery}&quot;
                         </p>
                         {results.map((result, i) => {
                             const amountColor =

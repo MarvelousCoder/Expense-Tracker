@@ -2,10 +2,11 @@
 # INFO: Test config
 # app/core/config.py
 
-from pydantic_settings import BaseSettings
-from typing import List, Optional
 from pathlib import Path
+from typing import Optional
+
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 # This finds the .env file relative to THIS file's location
 # config.py is at server/app/core/config.py
@@ -66,7 +67,7 @@ class Settings(BaseSettings):
     #     "http://localhost:3000",
     #     "http://localhost:3001",
     # ]
-    ALLOWED_ORIGINS: List[str] = [
+    ALLOWED_ORIGINS: list[str] = [
     "http://localhost:3000",
     "http://localhost:3001",
 ]

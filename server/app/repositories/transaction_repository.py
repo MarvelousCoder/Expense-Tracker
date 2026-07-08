@@ -1,16 +1,15 @@
 # app/repositories/transaction_repository.py
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, and_, extract
-from sqlalchemy.orm import selectinload
-from typing import Optional, List, Tuple
+from datetime import date, datetime, timezone
+from typing import Optional
 from uuid import UUID
-from datetime import datetime, timezone, date
-import calendar
 
-from app.models.transaction import Transaction, TransactionType
+from sqlalchemy import and_, extract, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.models.account import Account
-from app.models.category import Category
+from app.models.transaction import Transaction, TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
@@ -72,7 +71,7 @@ class TransactionRepository:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         search: Optional[str] = None,
-    ) -> Tuple[List[Transaction], int]:
+    ) -> tuple[list[Transaction], int]:
 
         # Base query
         conditions = [
@@ -270,7 +269,7 @@ class TransactionRepository:
             .where(
                 Account.user_id == user_id,
                 Account.deleted_at.is_(None),
-                Account.is_active == True
+                Account.is_active is True
             )
         )
         total_balance = balance_result.scalar_one() or 0

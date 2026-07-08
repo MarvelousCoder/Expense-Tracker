@@ -3,13 +3,15 @@
 import json
 import logging
 from datetime import datetime, timezone
-from groq import Groq
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract, and_
-from app.core.config import settings
-from app.models.transaction import Transaction, TransactionType
-from app.models.category import Category
 from uuid import UUID
+
+from groq import Groq
+from sqlalchemy import extract, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.category import Category
+from app.models.transaction import Transaction, TransactionType
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +137,7 @@ async def generate_insights(db: AsyncSession, user_id: UUID) -> list:
         if savings_rate > 30:
             insights.append(f"💰 Excellent! You're saving {savings_rate:.0f}% of your income this month.")
         elif savings_rate < 0:
-            insights.append(f"⚠️ You're spending more than you earn this month. Review your expenses.")
+            insights.append("⚠️ You're spending more than you earn this month. Review your expenses.")
 
     if context["top_spending_categories"]:
         top = context["top_spending_categories"][0]

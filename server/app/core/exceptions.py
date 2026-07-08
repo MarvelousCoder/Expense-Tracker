@@ -1,10 +1,11 @@
 # app/core/exceptions.py
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import IntegrityError
 import logging
+
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 

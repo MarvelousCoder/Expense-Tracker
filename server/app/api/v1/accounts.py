@@ -1,15 +1,15 @@
 # app/api/v1/accounts.py
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
-from uuid import UUID
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.account import AccountCreate, AccountUpdate, AccountResponse
 from app.repositories.account_repository import AccountRepository
+from app.schemas.account import AccountCreate, AccountResponse, AccountUpdate
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"])
 
@@ -30,7 +30,7 @@ async def create_account(
     return await repo.create(current_user.id, data)
 
 
-@router.get("", response_model=List[AccountResponse])
+@router.get("", response_model=list[AccountResponse])
 async def get_accounts(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)

@@ -23,12 +23,12 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.transaction import Transaction, TransactionType
+from app.ai.embeddings import embed_transaction, generate_query_embedding
 from app.models.category import Category
-from app.ai.embeddings import generate_query_embedding, embed_transaction
+from app.models.transaction import Transaction, TransactionType
 
 logger = logging.getLogger(__name__)
 

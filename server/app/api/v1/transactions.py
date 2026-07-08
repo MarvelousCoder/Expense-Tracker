@@ -829,30 +829,41 @@
 
 # app/api/v1/transactions.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract
-from app.models.transaction import Transaction, TransactionType
-from app.models.category import Category as CategoryModel
-from typing import Optional
-from uuid import UUID
-from datetime import date
 import csv
 import io
 import math
+from datetime import date
+from typing import Optional
+from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy import extract, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.ai.semantic_search import ensure_transaction_embedded  # Phase 6
+from app.core.audit import log_action
+from app.core.cache import (
+    analytics_key,
+    cache_delete_pattern,
+    cache_get,
+    cache_set,
+    dashboard_key,
+)
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
+from app.models.category import Category as CategoryModel
+from app.models.transaction import Transaction, TransactionType
 from app.models.user import User
-from app.schemas.transaction import (
-    BulkTransactionCreate, TransactionCreate, TransactionUpdate,
-    TransactionResponse, TransactionListResponse, DashboardSummary
-)
 from app.repositories.transaction_repository import TransactionRepository
-from app.core.cache import cache_get, cache_set, cache_delete_pattern, dashboard_key, analytics_key
-from app.core.audit import log_action
-from app.ai.semantic_search import ensure_transaction_embedded   # Phase 6
+from app.schemas.transaction import (
+    BulkTransactionCreate,
+    DashboardSummary,
+    TransactionCreate,
+    TransactionListResponse,
+    TransactionResponse,
+    TransactionUpdate,
+)
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 

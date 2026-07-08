@@ -5,11 +5,12 @@ Revises: a4aa83dde7a4
 Create Date: 2026-06-12 20:58:02.869057
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '7d837a603f27'
@@ -29,7 +30,7 @@ def upgrade() -> None:
         "ALTER COLUMN embedding TYPE vector(1536)"
     )
 
-    # Recreate index using HNSW 
+    # Recreate index using HNSW
     # m=16 = number of connections per layer (default, good for most cases)
     # ef_construction=64 = build-time accuracy/speed tradeoff (default)
     op.execute(

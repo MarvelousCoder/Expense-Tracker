@@ -149,28 +149,28 @@
 
 # app/api/v1/ai.py
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from typing import List, Optional
-from uuid import UUID
+from typing import Optional
 
-from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
-from app.models.user import User
-from app.models.transaction import TransactionType
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.ai.anomaly import detect_anomalies
 
 # Phase 5 AI
 from app.ai.categorizer import categorize_transaction
-from app.ai.ocr import extract_receipt_data
-from app.ai.insights import generate_insights
 from app.ai.chatbot import chat
 
 # Phase 6 AI
 from app.ai.embeddings import backfill_embeddings
-from app.ai.semantic_search import semantic_search
+from app.ai.insights import generate_insights
+from app.ai.ocr import extract_receipt_data
 from app.ai.recurring import detect_recurring_transactions
-from app.ai.anomaly import detect_anomalies
+from app.ai.semantic_search import semantic_search
+from app.core.database import get_db
+from app.core.dependencies import get_current_active_user
+from app.models.transaction import TransactionType
+from app.models.user import User
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -209,7 +209,7 @@ class OCRResponse(BaseModel):
     merchant: Optional[str] = None
     amount: Optional[float] = None
     date: Optional[str] = None
-    items: List[str] = []
+    items: list[str] = []
     category_hint: Optional[str] = None
     currency: str = "INR"
     confidence: str = "low"
@@ -256,7 +256,7 @@ async def scan_receipt(
 # ============================================================
 
 class InsightsResponse(BaseModel):
-    insights: List[str]
+    insights: list[str]
 
 
 @router.get("/insights", response_model=InsightsResponse)
@@ -275,7 +275,7 @@ async def get_insights(
 
 class ChatRequest(BaseModel):
     message: str
-    history: List[dict] = []
+    history: list[dict] = []
 
 
 class ChatResponse(BaseModel):
@@ -326,7 +326,7 @@ class SemanticSearchResult(BaseModel):
 
 
 class SemanticSearchResponse(BaseModel):
-    results: List[SemanticSearchResult]
+    results: list[SemanticSearchResult]
     query: str
     total: int
 
@@ -397,12 +397,12 @@ class RecurringPattern(BaseModel):
     period: str
     occurrences: int
     avg_amount: float
-    transaction_ids: List[str]
+    transaction_ids: list[str]
     next_expected: str
 
 
 class RecurringResponse(BaseModel):
-    patterns: List[RecurringPattern]
+    patterns: list[RecurringPattern]
     total: int
     message: str
 
@@ -449,7 +449,7 @@ class AnomalyTransaction(BaseModel):
 
 
 class AnomalyResponse(BaseModel):
-    anomalies: List[AnomalyTransaction]
+    anomalies: list[AnomalyTransaction]
     total: int
     days_analysed: int
     message: str

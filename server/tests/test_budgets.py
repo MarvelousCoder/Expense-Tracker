@@ -6,11 +6,12 @@
 # was created, instead of dynamically computing the current period
 # window every time.
 
-import pytest
-from datetime import datetime, timezone, timedelta, date
+from datetime import datetime, timedelta, timezone
 
-from app.models.transaction import TransactionType
+import pytest
+
 from app.models.budget import Budget, BudgetPeriod
+from app.models.transaction import TransactionType
 from app.repositories.budget_repository import BudgetRepository
 from tests.conftest import make_transaction
 

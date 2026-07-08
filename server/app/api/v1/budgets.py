@@ -1,19 +1,19 @@
 # app/api/v1/budgets.py
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
-from uuid import UUID
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
 from app.repositories.budget_repository import BudgetRepository
+from app.schemas.budget import BudgetCreate, BudgetResponse, BudgetUpdate
 
 router = APIRouter(prefix="/budgets", tags=["Budgets"])
 
-@router.get("", response_model=List[BudgetResponse])
+@router.get("", response_model=list[BudgetResponse])
 async def get_budgets(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)

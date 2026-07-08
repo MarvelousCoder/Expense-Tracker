@@ -1,9 +1,11 @@
 # app/core/security.py
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Any
-from jose import JWTError, jwt
+from typing import Any, Optional
+
 import bcrypt
+from jose import JWTError, jwt
+
 from app.core.config import settings
 
 

@@ -2,8 +2,8 @@
 
 import logging
 from datetime import datetime, timezone
+
 from fastapi import Request
-from uuid import UUID
 
 audit_logger = logging.getLogger("audit")
 

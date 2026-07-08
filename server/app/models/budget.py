@@ -1,15 +1,22 @@
 # app/models/budget.py
 
+import enum
+import uuid
+
 from sqlalchemy import (
-    Column, String, Boolean, DateTime,
-    ForeignKey, BigInteger, Integer,
-    Enum as SQLEnum
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
 )
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
-import enum
+
 from app.core.database import Base
 
 

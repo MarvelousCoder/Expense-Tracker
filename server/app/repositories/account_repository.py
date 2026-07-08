@@ -1,10 +1,11 @@
 # app/repositories/account_repository.py
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
-from typing import Optional, List
-from uuid import UUID
 from datetime import datetime, timezone
+from typing import Optional
+from uuid import UUID
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
 from app.schemas.account import AccountCreate, AccountUpdate
@@ -39,12 +40,12 @@ class AccountRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_all(self, user_id: UUID) -> List[Account]:
+    async def get_all(self, user_id: UUID) -> list[Account]:
         result = await self.db.execute(
             select(Account).where(
                 Account.user_id == user_id,
                 Account.deleted_at.is_(None),
-                Account.is_active == True
+                Account.is_active is True
             ).order_by(Account.is_default.desc(), Account.created_at.asc())
         )
         return list(result.scalars().all())
@@ -53,7 +54,7 @@ class AccountRepository:
         result = await self.db.execute(
             select(Account).where(
                 Account.user_id == user_id,
-                Account.is_default == True,
+                Account.is_default is True,
                 Account.deleted_at.is_(None)
             )
         )
@@ -93,6 +94,6 @@ class AccountRepository:
     async def _unset_default(self, user_id: UUID) -> None:
         await self.db.execute(
             update(Account)
-            .where(Account.user_id == user_id, Account.is_default == True)
+            .where(Account.user_id == user_id, Account.is_default is True)
             .values(is_default=False)
         )

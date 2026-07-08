@@ -1,9 +1,11 @@
 # app/schemas/user.py
 
-from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, field_validator
+
 from app.models.user import CurrencyEnum, ThemeEnum
 
 

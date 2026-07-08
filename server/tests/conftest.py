@@ -12,22 +12,21 @@
 # out of scope for this test suite — that logic depends on a live
 # Groq/Gemini API call anyway and isn't meaningfully unit-testable.
 
-import pytest
-import pytest_asyncio
 from datetime import date
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+import pytest_asyncio
+from pgvector.sqlalchemy import Vector
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.models.user import User
+from app.core.security import hash_password
 from app.models.account import Account, AccountType
 from app.models.category import Category
-from app.models.transaction import Transaction, TransactionType, PaymentMethod
-from app.models.budget import Budget, BudgetPeriod
-from app.core.security import hash_password
+from app.models.transaction import PaymentMethod, Transaction, TransactionType
+from app.models.user import User
 
-from sqlalchemy.ext.compiler import compiles
-from pgvector.sqlalchemy import Vector
 
 # pgvector's VECTOR type has no SQLite DDL compiler. Since embeddings are
 # never exercised in this test suite (see note above), just tell SQLite

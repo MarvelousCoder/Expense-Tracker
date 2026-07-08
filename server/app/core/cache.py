@@ -2,9 +2,10 @@
 
 import json
 import logging
-from typing import Optional, Any
-from functools import wraps
+from typing import Any, Optional
+
 import redis.asyncio as aioredis
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
