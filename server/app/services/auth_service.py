@@ -130,11 +130,12 @@ import logging
 import secrets
 from uuid import UUID
 
-
-from fastapi import HTTPException, status
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_delete, cache_get, cache_set, password_reset_key
+from app.core.config import settings
+from app.core.email import send_password_reset_email
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -147,9 +148,6 @@ from app.repositories.account_repository import AccountRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.account import AccountCreate
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserResponse
-from app.core.cache import cache_delete, cache_get, cache_set, password_reset_key
-from app.core.email import send_password_reset_email
-from app.core.config import settings
 
 
 class AuthService:

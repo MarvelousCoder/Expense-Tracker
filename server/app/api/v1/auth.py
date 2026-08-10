@@ -1,6 +1,6 @@
 # app/api/v1/auth.py
 
-from fastapi import APIRouter, Depends, Request, status, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
