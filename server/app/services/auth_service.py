@@ -127,14 +127,19 @@
 # app/services/auth_service.py
 
 import logging
+import secrets
+from uuid import UUID
+
 
 from fastapi import HTTPException, status
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
 from app.models.account import AccountType
@@ -142,6 +147,9 @@ from app.repositories.account_repository import AccountRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.account import AccountCreate
 from app.schemas.user import LoginRequest, TokenResponse, UserCreate, UserResponse
+from app.core.cache import cache_delete, cache_get, cache_set, password_reset_key
+from app.core.email import send_password_reset_email
+from app.core.config import settings
 
 
 class AuthService:
@@ -268,3 +276,44 @@ class AuthService:
             refresh_token=new_refresh_token,
             user=UserResponse.model_validate(user)
         )
+
+    # ================================
+    # Forgot Password
+    # ================================
+    async def forgot_password(self, email: str, background_tasks: BackgroundTasks) -> None:
+        user = await self.user_repo.get_by_email(email)
+
+        # Always behave the same whether or not the user exists —
+        # prevents attackers from discovering registered emails.
+        if user:
+            token = secrets.token_urlsafe(32)
+            await cache_set(
+                password_reset_key(token),
+                str(user.id),
+                ttl=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES * 60,
+            )
+            background_tasks.add_task(
+                send_password_reset_email, user.email, user.full_name, token
+            )
+
+    # ================================
+    # Reset Password
+    # ================================
+    async def reset_password(self, token: str, new_password: str) -> None:
+        user_id_str = await cache_get(password_reset_key(token))
+        if not user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset link. Please request a new one."
+            )
+
+        user = await self.user_repo.get_by_id(UUID(user_id_str))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        await self.user_repo.update_password(user.id, hash_password(new_password))
+        await self.db.commit()
+        await cache_delete(password_reset_key(token))

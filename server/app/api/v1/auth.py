@@ -1,13 +1,16 @@
 # app/api/v1/auth.py
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.schemas.user import (
+    ForgotPasswordRequest,
     LoginRequest,
+    MessageResponse,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserCreate,
 )
@@ -53,3 +56,32 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
 async def refresh(request: Request, token_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     return await service.refresh_token(token_data.refresh_token)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("3/minute")          # strict — this triggers an email send
+async def forgot_password(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    data: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    await service.forgot_password(data.email, background_tasks)
+    return MessageResponse(
+        message="If an account with that email exists, a password reset link has been sent."
+    )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("5/minute")
+async def reset_password(
+    request: Request,
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    await service.reset_password(data.token, data.new_password)
+    return MessageResponse(
+        message="Password reset successful. You can now log in with your new password."
+    )

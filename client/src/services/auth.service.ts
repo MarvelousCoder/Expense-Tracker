@@ -33,4 +33,20 @@ export const authService = {
         localStorage.removeItem("access_token")
         localStorage.removeItem("refresh_token")
     },
+
+    forgotPassword: async (email: string): Promise<{ message: string }> => {
+        return api.post<{ message: string }>("/auth/forgot-password", { email })
+    },
+
+    resetPassword: async (
+        token: string,
+        new_password: string,
+        confirm_password: string
+    ): Promise<{ message: string }> => {
+        return api.post<{ message: string }>("/auth/reset-password", {
+            token,
+            new_password,
+            confirm_password,
+        })
+    },
 }

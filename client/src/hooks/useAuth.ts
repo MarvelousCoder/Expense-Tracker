@@ -11,6 +11,7 @@ export function useAuth() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [message, setMessage] = useState<string | null>(null)
 
     const register = async (data: RegisterData) => {
         setIsLoading(true)
@@ -46,5 +47,53 @@ export function useAuth() {
         router.push("/login")
     }
 
-    return { register, login, logout, isLoading, error, isAuthenticated, user }
+    const forgotPassword = async (email: string) => {
+        setIsLoading(true)
+        setError(null)
+        setMessage(null)
+        try {
+            const response = await authService.forgotPassword(email)
+            setMessage(response.message)
+        } catch (err: any) {
+            setError(err.message || "Something went wrong. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const resetPassword = async (
+        token: string,
+        newPassword: string,
+        confirmPassword: string
+    ) => {
+        setIsLoading(true)
+        setError(null)
+        setMessage(null)
+        try {
+            const response = await authService.resetPassword(
+                token,
+                newPassword,
+                confirmPassword
+            )
+            setMessage(response.message)
+            setTimeout(() => router.push("/login"), 2000)
+        } catch (err: any) {
+            setError(err.message || "Could not reset password. The link may have expired.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return {
+        register,
+        login,
+        logout,
+        forgotPassword,
+        resetPassword,
+        isLoading,
+        error,
+        message,
+        isAuthenticated,
+        user,
+    }
 }

@@ -88,3 +88,6 @@ def insights_key(user_id: str) -> str:
 
 def analytics_key(user_id: str, year: int) -> str:
     return f"analytics:{user_id}:{year}"
+
+def password_reset_key(token: str) -> str:
+    return f"password_reset:{token}"

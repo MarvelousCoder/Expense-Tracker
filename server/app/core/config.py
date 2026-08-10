@@ -1,5 +1,4 @@
 
-# INFO: Test config
 # app/core/config.py
 
 from pathlib import Path
@@ -50,6 +49,26 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # ================================
+    # EMAIL / SMTP
+    # ================================
+    # SMTP_HOST: str = "smtp.gmail.com"
+    # SMTP_PORT: int = 587
+    # SMTP_USER: Optional[str] = None
+    # SMTP_PASSWORD: Optional[str] = None
+    # EMAILS_FROM_EMAIL: str = "noreply@trackwise.app"
+    # FRONTEND_URL: str = "http://localhost:3000"
+    # PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
+
+    # ================================
+    # EMAIL (BREVO)
+    # ================================
+    BREVO_API_KEY: Optional[str] = None
+    EMAILS_FROM_EMAIL: str = "your_actual_gmail@gmail.com"
+    EMAILS_FROM_NAME: str = "TrackWise"
+    FRONTEND_URL: str = "http://localhost:3000"
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
     # ================================
     # AI Services

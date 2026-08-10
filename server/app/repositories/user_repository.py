@@ -106,6 +106,17 @@ class UserRepository:
         return result.scalar_one()
 
     # ================================
+    # Password reset
+    # ================================
+    async def update_password(self, user_id: UUID, new_hashed_password: str) -> None:
+        await self.db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(hashed_password=new_hashed_password)
+        )
+        await self.db.flush()
+
+    # ================================
     # Soft Delete
     # ================================
     async def soft_delete(self, user_id: UUID) -> None:
