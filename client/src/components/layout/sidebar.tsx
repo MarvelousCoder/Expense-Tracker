@@ -50,12 +50,12 @@ export function Sidebar({ onLogout }: SidebarProps) {
             <motion.aside
                 animate={{ width: collapsed ? 72 : 240 }}
                 transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="relative hidden md:flex flex-col h-screen bg-sidebar border-r border-sidebar-border flex-shrink-0 overflow-hidden"
+                className="relative hidden md:flex flex-col h-screen bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden"
             >
                 {/* ── Logo ── */}
-                <div className="flex items-center h-16 px-4 border-b border-sidebar-border flex-shrink-0">
+                {/* <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                             <TrendingUp className="w-4 h-4 text-primary-foreground" />
                         </div>
                         <AnimatePresence>
@@ -71,6 +71,53 @@ export function Sidebar({ onLogout }: SidebarProps) {
                             )}
                         </AnimatePresence>
                     </div>
+                </div> */}
+
+                <div className={cn(
+                    "flex items-center h-16 px-4 border-b border-sidebar-border shrink-0",
+                    collapsed ? "justify-center" : "justify-between"
+                )}>
+                    <AnimatePresence mode="wait">
+                        {!collapsed && (
+                            <motion.div
+                                key="brand"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className="flex items-center gap-3 overflow-hidden"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                                    <TrendingUp className="w-4 h-4 text-primary-foreground" />
+                                </div>
+                                <span className="font-semibold text-sm whitespace-nowrap overflow-hidden">
+                                    {APP_NAME}
+                                </span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setCollapsed(!collapsed)}
+                                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                                className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                            >
+                                <motion.div
+                                    animate={{ rotate: collapsed ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </motion.div>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
 
                 {/* ── Nav Items ── */}
@@ -100,7 +147,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                                 )}
 
                                 <Icon className={cn(
-                                    "h-4 w-4 flex-shrink-0",
+                                    "h-4 w-4 shrink-0",
                                     isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
                                 )} />
 
@@ -121,7 +168,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                                 {item.label === "AI Insights" && !collapsed && (
                                     <Badge
                                         variant="secondary"
-                                        className="ml-auto text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-0"
+                                        className="ml-auto text-[10px] px-1.5 py-0 h-4 badge-ai"
                                     >
                                         AI
                                     </Badge>
@@ -148,7 +195,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                         "flex items-center gap-3 p-2 rounded-lg",
                         collapsed ? "justify-center" : ""
                     )}>
-                        <Avatar className="h-8 w-8 flex-shrink-0">
+                        <Avatar className="h-8 w-8 shrink-0">
                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                                 {initials}
                             </AvatarFallback>
@@ -184,7 +231,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                                                 onClick={onLogout}
                                             >
                                                 <LogOut className="h-4 w-4" />
@@ -199,7 +246,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                 </div>
 
                 {/* ── Collapse toggle ── */}
-                <Button
+                {/* <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setCollapsed(!collapsed)}
@@ -208,7 +255,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                     <motion.div animate={{ rotate: collapsed ? 180 : 0 }}>
                         <ChevronLeft className="h-3 w-3" />
                     </motion.div>
-                </Button>
+                </Button> */}
             </motion.aside>
         </TooltipProvider>
     )

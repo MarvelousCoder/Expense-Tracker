@@ -115,47 +115,6 @@ class TransactionRepository:
         items = list(result.scalars().all())
         return items, total
 
-    # async def update(
-    #     self,
-    #     transaction_id: UUID,
-    #     user_id: UUID,
-    #     data: TransactionUpdate
-    # ) -> Optional[Transaction]:
-    #     existing = await self.get_by_id(transaction_id, user_id)
-    #     if not existing:
-    #         return None
-
-    #     values = data.model_dump(exclude_none=True)
-
-    #     # Reverse old balance effect
-    #     old_delta = existing.amount if existing.transaction_type == TransactionType.INCOME else -existing.amount
-    #     await self.db.execute(
-    #         update(Account)
-    #         .where(Account.id == existing.account_id)
-    #         .values(balance=Account.balance - old_delta)
-    #     )
-
-    #     await self.db.execute(
-    #         update(Transaction)
-    #         .where(Transaction.id == transaction_id)
-    #         .values(**values)
-    #     )
-    #     await self.db.flush()
-
-    #     updated = await self.get_by_id(transaction_id, user_id)
-
-    #     # Apply new balance effect
-    #     new_type = data.transaction_type or existing.transaction_type
-    #     new_amount = data.amount or existing.amount
-    #     new_account = data.account_id or existing.account_id
-    #     new_delta = new_amount if new_type == TransactionType.INCOME else -new_amount
-    #     await self.db.execute(
-    #         update(Account)
-    #         .where(Account.id == new_account)
-    #         .values(balance=Account.balance + new_delta)
-    #     )
-    #     await self.db.flush()
-    #     return updated
 
     # NOTE: 2nd change for update function
     async def update(
@@ -269,7 +228,8 @@ class TransactionRepository:
             .where(
                 Account.user_id == user_id,
                 Account.deleted_at.is_(None),
-                Account.is_active is True
+                # Account.is_active is True
+                Account.is_active.is_(True)
             )
         )
         total_balance = balance_result.scalar_one() or 0

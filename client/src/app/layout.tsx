@@ -1,3 +1,5 @@
+// src/app/layout.tsx
+
 // import type { Metadata } from "next";
 // import { Geist, Geist_Mono, Inter } from "next/font/google";
 // import "./globals.css";
@@ -37,7 +39,7 @@
 
 // src/app/layout.tsx
 import type { Metadata } from "next"
-import { Inter, Plus_Jakarta_Sans } from "next/font/google"
+import { Inter, Space_Grotesk, IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/shared/theme-provider"
 import { QueryProvider } from "@/components/shared/query-provider"
@@ -49,9 +51,15 @@ const inter = Inter({
   variable: "--font-inter",
 })
 
-const plusJakarta = Plus_Jakarta_Sans({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
+  variable: "--font-space-grotesk",
+})
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
 })
 
 export const metadata: Metadata = {
@@ -71,7 +79,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={cn(
         inter.variable,
-        plusJakarta.variable,
+        spaceGrotesk.variable,
+        plexMono.variable,
         "font-sans antialiased"
       )}>
         <ThemeProvider>

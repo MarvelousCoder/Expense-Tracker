@@ -77,7 +77,8 @@ async def _get_financial_summary(db: AsyncSession, user_id: UUID) -> dict:
         .where(
             Account.user_id == user_id,
             Account.deleted_at.is_(None),
-            Account.is_active is True
+            # Account.is_active is True
+            Account.is_active.is_(True)
         )
     )
     accounts = [

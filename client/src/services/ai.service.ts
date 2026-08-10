@@ -58,6 +58,42 @@ export interface BackfillResponse {
     message: string
 }
 
+// NEW: matches RecurringPattern / RecurringResponse in server/app/api/v1/ai.py
+export interface RecurringPattern {
+    merchant: string
+    period: string
+    occurrences: number
+    avg_amount: number
+    transaction_ids: string[]
+    next_expected: string
+}
+
+export interface RecurringResponse {
+    patterns: RecurringPattern[]
+    total: number
+    message: string
+}
+
+// NEW: matches AnomalyTransaction / AnomalyResponse in server/app/api/v1/ai.py
+export interface AnomalyTransaction {
+    transaction_id: string
+    description: string
+    amount: number
+    date: string
+    category: string
+    anomaly_score: number
+    baseline_mean: number
+    baseline_std: number
+    explanation: string
+}
+
+export interface AnomalyResponse {
+    anomalies: AnomalyTransaction[]
+    total: number
+    days_analysed: number
+    message: string
+}
+
 export const aiService = {
     categorize: (description: string, amount: number) =>
         api.post<CategorizeResponse>("/ai/categorize", { description, amount }),
@@ -96,4 +132,15 @@ export const aiService = {
     // New transactions are embedded automatically on creation.
     // Safe to call multiple times — only processes un-embedded transactions.
     backfill: () => api.post<BackfillResponse>("/ai/search/backfill", {}),
+
+    // NEW: Detect recurring expense patterns (subscriptions, rent, bills).
+    // Pure statistical pattern-matching — no LLM call, no AI API cost.
+    getRecurring: () => api.get<RecurringResponse>("/ai/recurring"),
+
+    // NEW: Detect unusually large transactions vs. the user's normal spending,
+    // per category, using Z-score analysis. The `explanation` field on each
+    // result IS genuinely LLM-generated (via Groq), unlike getRecurring above.
+    // days: 7-90, matches the backend's Query(ge=7, le=90) constraint.
+    getAnomalies: (days: number = 30) =>
+        api.get<AnomalyResponse>(`/ai/anomalies?days=${days}`),
 }

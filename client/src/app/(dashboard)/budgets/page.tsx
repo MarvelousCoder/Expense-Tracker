@@ -1,8 +1,8 @@
 // // src/app/(dashboard)/budgets/page.tsx
 // "use client"
 
-// import { useState } from "react"
-// import { useBudgets, useCreateBudget, useDeleteBudget } from "@/hooks/useBudgets"
+// import { useEffect, useState } from "react"
+// import { useBudgets, useCreateBudget, useDeleteBudget, useUpdateBudget } from "@/hooks/useBudgets"
 // import { useCategories } from "@/hooks/useCategories"
 // import { useAuthStore } from "@/store/auth.store"
 // import { motion } from "framer-motion"
@@ -14,8 +14,7 @@
 // import { Skeleton } from "@/components/ui/skeleton"
 // import {
 //     Dialog, DialogContent, DialogHeader,
-//     DialogTitle, DialogFooter,
-//     DialogDescription,
+//     DialogTitle, DialogFooter, DialogDescription,
 // } from "@/components/ui/dialog"
 // import {
 //     Select, SelectContent, SelectItem,
@@ -24,10 +23,11 @@
 // import {
 //     Plus, Trash2, AlertTriangle,
 //     CheckCircle2, TrendingDown,
+//     Pencil,
 // } from "lucide-react"
 // import { Budget } from "@/services/budget.service"
 // import { cn } from "@/lib/utils"
-
+// import { CATEGORY_SORT_ORDER } from "@/constants"
 
 // // ─── Delete Confirmation Dialog ────────────────────────────────────────────────
 // function DeleteBudgetDialog({ budget, onConfirm, onCancel }: {
@@ -66,10 +66,149 @@
 //     )
 // }
 
-// function BudgetCard({ budget, symbol, onDelete }: {
+// // ─── Edit Budget Modal ─────────────────────────────────────────────────────────
+// // Only name, amount, and alert_threshold are editable.
+// // Category and period are fixed at creation — changing them would
+// // invalidate the spent/remaining tracking already built up for this budget.
+// function EditBudgetModal({ budget, onOpenChange }: {
+//     budget: Budget | null
+//     onOpenChange: (v: boolean) => void
+// }) {
+//     const { mutate: updateBudget, isPending } = useUpdateBudget()
+//     const [name, setName] = useState("")
+//     const [amount, setAmount] = useState("")
+//     const [threshold, setThreshold] = useState(80)
+
+//     // Pre-fill form whenever a budget is selected for editing
+//     useEffect(() => {
+//         if (budget) {
+//             setName(budget.name)
+//             setAmount(String(budget.amount_display))
+//             setThreshold(budget.alert_threshold)
+//         }
+//     }, [budget])
+
+//     const sliderColor =
+//         threshold >= 90 ? "text-red-500" :
+//             threshold >= 70 ? "text-yellow-500" :
+//                 "text-green-500"
+
+//     const handleSubmit = () => {
+//         if (!budget || !name || !amount) return
+//         updateBudget(
+//             {
+//                 id: budget.id,
+//                 data: {
+//                     name,
+//                     amount: Math.round(parseFloat(amount) * 100),
+//                     alert_threshold: threshold,
+//                 },
+//             },
+//             {
+//                 onSuccess: () => onOpenChange(false),
+//             }
+//         )
+//     }
+
+//     return (
+//         <Dialog open={!!budget} onOpenChange={onOpenChange}>
+//             <DialogContent className="sm:max-w-sm">
+//                 <DialogHeader>
+//                     <DialogTitle>Edit Budget</DialogTitle>
+//                     <DialogDescription>
+//                         Update name, amount, or alert threshold. Category and period can&apos;t be changed.
+//                     </DialogDescription>
+//                 </DialogHeader>
+
+//                 <div className="space-y-4">
+//                     <div className="space-y-1.5">
+//                         <Label htmlFor="edit-budget-name">Budget name</Label>
+//                         <Input
+//                             id="edit-budget-name"
+//                             placeholder="e.g. Monthly Food"
+//                             value={name}
+//                             onChange={(e) => setName(e.target.value)}
+//                         />
+//                     </div>
+
+//                     <div className="space-y-1.5">
+//                         <Label htmlFor="edit-budget-amount">Budget amount (₹)</Label>
+//                         <Input
+//                             id="edit-budget-amount"
+//                             type="number"
+//                             placeholder="5000"
+//                             value={amount}
+//                             onChange={(e) => setAmount(e.target.value)}
+//                         />
+//                     </div>
+
+//                     {/* Read-only info — category and period shown but not editable */}
+//                     <div className="grid grid-cols-2 gap-3">
+//                         <div className="space-y-1.5">
+//                             <Label className="text-muted-foreground">Category</Label>
+//                             <div className="text-sm px-3 py-2 rounded-md bg-muted text-muted-foreground">
+//                                 {budget?.category_icon ?? "💰"} {budget?.category_name ?? "All categories"}
+//                             </div>
+//                         </div>
+//                         <div className="space-y-1.5">
+//                             <Label className="text-muted-foreground">Period</Label>
+//                             <div className="text-sm px-3 py-2 rounded-md bg-muted text-muted-foreground capitalize">
+//                                 {budget?.period}
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     {/* Alert threshold slider */}
+//                     <div className="space-y-2">
+//                         <div className="flex items-center justify-between">
+//                             <Label htmlFor="edit-alert-threshold">Alert threshold</Label>
+//                             <span className={cn("text-sm font-semibold tabular-nums", sliderColor)}>
+//                                 {threshold}%
+//                             </span>
+//                         </div>
+//                         <input
+//                             id="edit-alert-threshold"
+//                             aria-label="Alert threshold percentage"
+//                             type="range"
+//                             min={10}
+//                             max={100}
+//                             step={5}
+//                             value={threshold}
+//                             onChange={(e) => setThreshold(Number(e.target.value))}
+//                             className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-primary"
+//                         />
+//                         <div className="flex justify-between text-xs text-muted-foreground">
+//                             <span>10%</span>
+//                             <span className="text-muted-foreground">
+//                                 Alert when spending hits {threshold}% of budget
+//                             </span>
+//                             <span>100%</span>
+//                         </div>
+//                     </div>
+//                 </div>
+
+//                 <DialogFooter>
+//                     <Button variant="outline" onClick={() => onOpenChange(false)}>
+//                         Cancel
+//                     </Button>
+//                     <Button
+//                         onClick={handleSubmit}
+//                         disabled={isPending || !name || !amount}
+//                     >
+//                         Save Changes
+//                     </Button>
+//                 </DialogFooter>
+//             </DialogContent>
+//         </Dialog>
+//     )
+// }
+
+// // ─── Budget Card ───────────────────────────────────────────────────────────────
+// function BudgetCard({ budget, symbol, onEditClick, onDeleteClick }: {
 //     budget: Budget
 //     symbol: string
-//     onDelete: (id: string) => void
+//     onEditClick: (budget: Budget) => void
+//     onDeleteClick: (budget: Budget) => void
 // }) {
 //     const statusColor = budget.is_exceeded
 //         ? "bg-red-500"
@@ -119,7 +258,7 @@
 //                                 Alert
 //                             </Badge>
 //                         )}
-//                         {!budget.is_alert && (
+//                         {!budget.is_alert && !budget.is_exceeded && (
 //                             <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-0">
 //                                 <CheckCircle2 className="w-3 h-3 mr-1" />
 //                                 On track
@@ -128,8 +267,16 @@
 //                         <Button
 //                             variant="ghost"
 //                             size="icon"
+//                             className="h-7 w-7 text-muted-foreground hover:text-foreground"
+//                             onClick={() => onEditClick(budget)}
+//                         >
+//                             <Pencil className="h-3.5 w-3.5" />
+//                         </Button>
+//                         <Button
+//                             variant="ghost"
+//                             size="icon"
 //                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-//                             onClick={() => onDelete(budget.id)}
+//                             onClick={() => onDeleteClick(budget)}
 //                         >
 //                             <Trash2 className="h-3.5 w-3.5" />
 //                         </Button>
@@ -161,13 +308,14 @@
 //                     />
 //                 </div>
 //                 <p className="text-xs text-muted-foreground mt-1.5 text-right">
-//                     {budget.percentage}% used
+//                     {budget.percentage}% used · alert at {budget.alert_threshold}%
 //                 </p>
 //             </Card>
 //         </motion.div>
 //     )
 // }
 
+// // ─── Add Budget Modal ──────────────────────────────────────────────────────────
 // function AddBudgetModal({ open, onOpenChange }: {
 //     open: boolean
 //     onOpenChange: (v: boolean) => void
@@ -178,7 +326,19 @@
 //     const [amount, setAmount] = useState("")
 //     const [categoryId, setCategoryId] = useState("")
 //     const [period, setPeriod] = useState("monthly")
-//     const [threshold, setThreshold] = useState("80")
+//     const [threshold, setThreshold] = useState(80)
+
+//     // Sort categories by fixed priority order
+//     const sortedCategories = [...categories].sort((a, b) => {
+//         const ai = CATEGORY_SORT_ORDER.indexOf(a.name as any)
+//         const bi = CATEGORY_SORT_ORDER.indexOf(b.name as any)
+//         return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+//     })
+
+//     const sliderColor =
+//         threshold >= 90 ? "text-red-500" :
+//             threshold >= 70 ? "text-yellow-500" :
+//                 "text-green-500"
 
 //     const handleSubmit = () => {
 //         if (!name || !amount) return
@@ -188,11 +348,14 @@
 //                 amount: Math.round(parseFloat(amount) * 100),
 //                 period,
 //                 category_id: categoryId || undefined,
-//                 alert_threshold: parseInt(threshold),
+//                 alert_threshold: threshold,
 //             },
 //             {
 //                 onSuccess: () => {
-//                     setName(""); setAmount(""); setCategoryId(""); setThreshold("80")
+//                     setName("")
+//                     setAmount("")
+//                     setCategoryId("")
+//                     setThreshold(80)
 //                     onOpenChange(false)
 //                 },
 //             }
@@ -208,33 +371,37 @@
 //                         Set a spending limit to track your budget.
 //                     </DialogDescription>
 //                 </DialogHeader>
-//                 <div className="space-y-4">
-//                     <div className="space-y-1.5">
-//                         <Label>Budget name</Label>
-//                         <Input
-//                             placeholder="e.g. Monthly Food"
-//                             value={name}
-//                             onChange={(e) => setName(e.target.value)}
-//                         />
-//                     </div>
-//                     <div className="space-y-1.5">
-//                         <Label>Budget amount (₹)</Label>
-//                         <Input
-//                             type="number"
-//                             placeholder="5000"
-//                             value={amount}
-//                             onChange={(e) => setAmount(e.target.value)}
-//                         />
-//                     </div>
+//                 <div>
+//                 <div className="space-y-1.5">
+//                     <Label htmlFor="budget-name">Budget name</Label>
+//                     <Input
+//                         id="budget-name"
+//                         placeholder="e.g. Monthly Food"
+//                         value={name}
+//                         onChange={(e) => setName(e.target.value)}
+//                     />
+//                 </div>
+
+//                 <div className="space-y-1.5">
+//                     <Label htmlFor="budget-amount">Budget amount (₹)</Label>
+//                     <Input
+//                         id="budget-amount"
+//                         type="number"
+//                         placeholder="5000"
+//                         value={amount}
+//                         onChange={(e) => setAmount(e.target.value)}
+//                     />
+//                 </div>
+
 //                     <div className="grid grid-cols-2 gap-3">
 //                         <div className="space-y-1.5">
-//                             <Label>Category</Label>
-//                             <Select onValueChange={setCategoryId}>
-//                                 <SelectTrigger>
+//                         <Label htmlFor="budget-category">Category</Label>
+//                         <Select onValueChange={setCategoryId}>
+//                             <SelectTrigger id="budget-category" aria-label="Budget category">
 //                                     <SelectValue placeholder="All" />
 //                                 </SelectTrigger>
 //                                 <SelectContent>
-//                                     {categories.map((c) => (
+//                                     {sortedCategories.map((c) => (
 //                                         <SelectItem key={c.id} value={c.id}>
 //                                             {c.icon} {c.name}
 //                                         </SelectItem>
@@ -243,9 +410,9 @@
 //                             </Select>
 //                         </div>
 //                         <div className="space-y-1.5">
-//                             <Label>Period</Label>
-//                             <Select defaultValue="monthly" onValueChange={setPeriod}>
-//                                 <SelectTrigger>
+//                         <Label htmlFor="budget-period">Period</Label>
+//                         <Select defaultValue="monthly" onValueChange={setPeriod}>
+//                             <SelectTrigger id="budget-period" aria-label="Budget period">
 //                                     <SelectValue />
 //                                 </SelectTrigger>
 //                                 <SelectContent>
@@ -256,23 +423,46 @@
 //                             </Select>
 //                         </div>
 //                     </div>
-//                     <div className="space-y-1.5">
-//                         <Label>Alert at (%)</Label>
-//                         <Input
-//                             type="number"
-//                             min="1"
-//                             max="100"
+
+//                     {/* Alert threshold slider */}
+//                     <div className="space-y-2">
+//                         <div className="flex items-center justify-between">
+//                         <Label htmlFor="alert-threshold">
+//                             Alert threshold
+//                         </Label>
+//                             <span className={cn("text-sm font-semibold tabular-nums", sliderColor)}>
+//                                 {threshold}%
+//                             </span>
+//                         </div>
+//                     <input
+//                         id="alert-threshold"
+//                         aria-label="Alert threshold percentage"
+//                         type="range"
+//                             min={10}
+//                             max={100}
+//                             step={5}
 //                             value={threshold}
-//                             onChange={(e) => setThreshold(e.target.value)}
+//                             onChange={(e) => setThreshold(Number(e.target.value))}
+//                             className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-primary"
 //                         />
-//                         <p className="text-xs text-muted-foreground">
-//                             Get alerted when spending reaches this percentage
-//                         </p>
+//                         <div className="flex justify-between text-xs text-muted-foreground">
+//                             <span>10%</span>
+//                             <span className="text-muted-foreground">
+//                                 Alert when spending hits {threshold}% of budget
+//                             </span>
+//                             <span>100%</span>
+//                         </div>
 //                     </div>
 //                 </div>
+
 //                 <DialogFooter>
-//                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-//                     <Button onClick={handleSubmit} disabled={isPending || !name || !amount}>
+//                     <Button variant="outline" onClick={() => onOpenChange(false)}>
+//                         Cancel
+//                     </Button>
+//                     <Button
+//                         onClick={handleSubmit}
+//                         disabled={isPending || !name || !amount}
+//                     >
 //                         Create Budget
 //                     </Button>
 //                 </DialogFooter>
@@ -281,17 +471,26 @@
 //     )
 // }
 
+// // ─── Page ──────────────────────────────────────────────────────────────────────
 // export default function BudgetsPage() {
 //     const { user } = useAuthStore()
 //     const { data: budgets = [], isLoading } = useBudgets()
 //     const { mutate: deleteBudget } = useDeleteBudget()
 //     const [addOpen, setAddOpen] = useState(false)
+//     const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
+//     const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null)
 //     const symbol = user?.currency === "USD" ? "$" : "₹"
 
 //     const totalBudgeted = budgets.reduce((s, b) => s + b.amount_display, 0)
 //     const totalSpent = budgets.reduce((s, b) => s + b.spent, 0)
 //     const exceeded = budgets.filter((b) => b.is_exceeded).length
 //     const onAlert = budgets.filter((b) => b.is_alert && !b.is_exceeded).length
+
+//     const handleConfirmDelete = () => {
+//         if (!budgetToDelete) return
+//         deleteBudget(budgetToDelete.id)
+//         setBudgetToDelete(null)
+//     }
 
 //     return (
 //         <div className="space-y-6 page-enter">
@@ -356,17 +555,28 @@
 //                             key={budget.id}
 //                             budget={budget}
 //                             symbol={symbol}
-//                             onDelete={deleteBudget}
+//                             onEditClick={setEditingBudget}
+//                             onDeleteClick={setBudgetToDelete}
 //                         />
 //                     ))}
 //                 </div>
 //             )}
 
 //             <AddBudgetModal open={addOpen} onOpenChange={setAddOpen} />
+
+//             <EditBudgetModal
+//                 budget={editingBudget}
+//                 onOpenChange={(open) => { if (!open) setEditingBudget(null) }}
+//             />
+
+//             <DeleteBudgetDialog
+//                 budget={budgetToDelete}
+//                 onConfirm={handleConfirmDelete}
+//                 onCancel={() => setBudgetToDelete(null)}
+//             />
 //         </div>
 //     )
 // }
-
 
 // src/app/(dashboard)/budgets/page.tsx
 "use client"
@@ -459,9 +669,9 @@ function EditBudgetModal({ budget, onOpenChange }: {
     }, [budget])
 
     const sliderColor =
-        threshold >= 90 ? "text-red-500" :
-            threshold >= 70 ? "text-yellow-500" :
-                "text-green-500"
+        threshold >= 90 ? "text-expense" :
+            threshold >= 70 ? "text-warning" :
+                "text-income"
 
     const handleSubmit = () => {
         if (!budget || !name || !amount) return
@@ -581,15 +791,15 @@ function BudgetCard({ budget, symbol, onEditClick, onDeleteClick }: {
     onDeleteClick: (budget: Budget) => void
 }) {
     const statusColor = budget.is_exceeded
-        ? "bg-red-500"
+        ? "bg-expense"
         : budget.is_alert
-            ? "bg-yellow-500"
+            ? "bg-warning"
             : "bg-primary"
 
     const trackColor = budget.is_exceeded
-        ? "bg-red-500/20"
+        ? "bg-expense/20"
         : budget.is_alert
-            ? "bg-yellow-500/20"
+            ? "bg-warning/20"
             : "bg-primary/20"
 
     return (
@@ -617,19 +827,19 @@ function BudgetCard({ budget, symbol, onEditClick, onDeleteClick }: {
 
                     <div className="flex items-center gap-2">
                         {budget.is_exceeded && (
-                            <Badge variant="secondary" className="text-xs bg-red-500/10 text-red-500 border-0">
+                            <Badge variant="secondary" className="text-xs bg-expense/10 text-expense border-0">
                                 <AlertTriangle className="w-3 h-3 mr-1" />
                                 Exceeded
                             </Badge>
                         )}
                         {budget.is_alert && !budget.is_exceeded && (
-                            <Badge variant="secondary" className="text-xs bg-yellow-500/10 text-yellow-600 border-0">
+                            <Badge variant="secondary" className="text-xs bg-warning/10 text-warning border-0">
                                 <AlertTriangle className="w-3 h-3 mr-1" />
                                 Alert
                             </Badge>
                         )}
                         {!budget.is_alert && !budget.is_exceeded && (
-                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-0">
+                            <Badge variant="secondary" className="text-xs bg-income/10 text-income border-0">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 On track
                             </Badge>
@@ -656,14 +866,14 @@ function BudgetCard({ budget, symbol, onEditClick, onDeleteClick }: {
                 {/* Amounts */}
                 <div className="flex items-end justify-between mb-3">
                     <div>
-                        <p className="text-2xl font-bold">
+                        <p className="text-2xl font-bold font-amount">
                             {symbol}{budget.spent.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground font-amount">
                             of {symbol}{budget.amount_display.toLocaleString("en-IN")} budget
                         </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground font-amount">
                         {symbol}{budget.remaining.toLocaleString("en-IN")} left
                     </p>
                 </div>
@@ -706,9 +916,9 @@ function AddBudgetModal({ open, onOpenChange }: {
     })
 
     const sliderColor =
-        threshold >= 90 ? "text-red-500" :
-            threshold >= 70 ? "text-yellow-500" :
-                "text-green-500"
+        threshold >= 90 ? "text-expense" :
+            threshold >= 70 ? "text-warning" :
+                "text-income"
 
     const handleSubmit = () => {
         if (!name || !amount) return
@@ -741,33 +951,33 @@ function AddBudgetModal({ open, onOpenChange }: {
                         Set a spending limit to track your budget.
                     </DialogDescription>
                 </DialogHeader>
-                <div>
-                <div className="space-y-1.5">
-                    <Label htmlFor="budget-name">Budget name</Label>
-                    <Input
-                        id="budget-name"
-                        placeholder="e.g. Monthly Food"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                    />
-                </div>
+                <div className="space-y-4">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="budget-name">Budget name</Label>
+                        <Input
+                            id="budget-name"
+                            placeholder="e.g. Monthly Food"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
 
-                <div className="space-y-1.5">
-                    <Label htmlFor="budget-amount">Budget amount (₹)</Label>
-                    <Input
-                        id="budget-amount"
-                        type="number"
-                        placeholder="5000"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                    />
-                </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="budget-amount">Budget amount (₹)</Label>
+                        <Input
+                            id="budget-amount"
+                            type="number"
+                            placeholder="5000"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                        />
+                    </div>
 
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                        <Label htmlFor="budget-category">Category</Label>
-                        <Select onValueChange={setCategoryId}>
-                            <SelectTrigger id="budget-category" aria-label="Budget category">
+                            <Label htmlFor="budget-category">Category</Label>
+                            <Select onValueChange={setCategoryId}>
+                                <SelectTrigger id="budget-category" aria-label="Budget category">
                                     <SelectValue placeholder="All" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -780,9 +990,9 @@ function AddBudgetModal({ open, onOpenChange }: {
                             </Select>
                         </div>
                         <div className="space-y-1.5">
-                        <Label htmlFor="budget-period">Period</Label>
-                        <Select defaultValue="monthly" onValueChange={setPeriod}>
-                            <SelectTrigger id="budget-period" aria-label="Budget period">
+                            <Label htmlFor="budget-period">Period</Label>
+                            <Select defaultValue="monthly" onValueChange={setPeriod}>
+                                <SelectTrigger id="budget-period" aria-label="Budget period">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -797,17 +1007,17 @@ function AddBudgetModal({ open, onOpenChange }: {
                     {/* Alert threshold slider */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                        <Label htmlFor="alert-threshold">
-                            Alert threshold
-                        </Label>
+                            <Label htmlFor="alert-threshold">
+                                Alert threshold
+                            </Label>
                             <span className={cn("text-sm font-semibold tabular-nums", sliderColor)}>
                                 {threshold}%
                             </span>
                         </div>
-                    <input
-                        id="alert-threshold"
-                        aria-label="Alert threshold percentage"
-                        type="range"
+                        <input
+                            id="alert-threshold"
+                            aria-label="Alert threshold percentage"
+                            type="range"
                             min={10}
                             max={100}
                             step={5}
@@ -882,13 +1092,13 @@ export default function BudgetsPage() {
             {budgets.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                        { label: "Total Budgeted", value: `${symbol}${totalBudgeted.toLocaleString("en-IN")}`, color: "text-primary" },
-                        { label: "Total Spent", value: `${symbol}${totalSpent.toLocaleString("en-IN")}`, color: "text-foreground" },
-                        { label: "Exceeded", value: exceeded.toString(), color: "text-red-500" },
-                        { label: "On Alert", value: onAlert.toString(), color: "text-yellow-600" },
+                        { label: "Total Budgeted", value: `${symbol}${totalBudgeted.toLocaleString("en-IN")}`, color: "text-primary", isAmount: true },
+                        { label: "Total Spent", value: `${symbol}${totalSpent.toLocaleString("en-IN")}`, color: "text-foreground", isAmount: true },
+                        { label: "Exceeded", value: exceeded.toString(), color: "text-expense", isAmount: false },
+                        { label: "On Alert", value: onAlert.toString(), color: "text-warning", isAmount: false },
                     ].map((s) => (
                         <Card key={s.label} className="p-4 text-center">
-                            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                            <p className={`text-xl font-bold ${s.color} ${s.isAmount ? "font-amount" : ""}`}>{s.value}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
                         </Card>
                     ))}

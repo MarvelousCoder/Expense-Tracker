@@ -45,7 +45,8 @@ class AccountRepository:
             select(Account).where(
                 Account.user_id == user_id,
                 Account.deleted_at.is_(None),
-                Account.is_active is True
+                # Account.is_active is True
+                Account.is_active.is_(True)
             ).order_by(Account.is_default.desc(), Account.created_at.asc())
         )
         return list(result.scalars().all())
@@ -54,7 +55,8 @@ class AccountRepository:
         result = await self.db.execute(
             select(Account).where(
                 Account.user_id == user_id,
-                Account.is_default is True,
+                # Account.is_default is True,
+                Account.is_default.is_(True),
                 Account.deleted_at.is_(None)
             )
         )
@@ -94,6 +96,7 @@ class AccountRepository:
     async def _unset_default(self, user_id: UUID) -> None:
         await self.db.execute(
             update(Account)
-            .where(Account.user_id == user_id, Account.is_default is True)
+            # .where(Account.user_id == user_id, Account.is_default.is_(True))
+            .where(Account.user_id == user_id, Account.is_default.is_(True))
             .values(is_default=False)
         )

@@ -1,7 +1,7 @@
 // src/app/(dashboard)/ai-insights/page.tsx
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, Suspense } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { aiService, SemanticSearchResult } from "@/services/ai.service"
 import { useAuthStore } from "@/store/auth.store"
@@ -15,10 +15,14 @@ import {
     Sparkles, Send, Upload, Bot,
     User, Loader2, ReceiptText, TrendingUp,
     Search,
+    AlertTriangle,
+    CalendarClock,
+    Repeat,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { AddTransactionModal, InitialTransactionData } from "@/components/forms/add-transaction-modal"
+import { useSearchParams } from "next/navigation"
 
 // ================================
 // Insights Section
@@ -50,8 +54,11 @@ function InsightsSection() {
                     transition={{ delay: i * 0.1 }}
                     className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border border-border"
                 >
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {/* <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Sparkles className="w-4 h-4 text-primary" />
+                    </div> */}
+                    <div className="w-8 h-8 rounded-full bg-ai/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Sparkles className="w-4 h-4 text-ai" />
                     </div>
                     <p className="text-sm leading-relaxed">{insight}</p>
                 </motion.div>
@@ -92,8 +99,15 @@ function OCRSection({ onUseData }: { onUseData: (data: InitialTransactionData) =
 
     return (
         <div className="space-y-4">
-            <div
+            {/* <div
                 className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
+                onClick={() => fileRef.current?.click()}
+            > */}
+            {/* INFO: UPDATED: was hover:border-primary/50 — this dropzone triggers an
+                AI-powered OCR scan, so its interactive accent now matches the
+                --ai token instead of the blue money/primary color.  */}
+            <div
+                className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-ai/50 hover:bg-muted/30 transition-all"
                 onClick={() => fileRef.current?.click()}
             >
                 <input
@@ -106,7 +120,7 @@ function OCRSection({ onUseData }: { onUseData: (data: InitialTransactionData) =
                 />
                 {scanning ? (
                     <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <Loader2 className="w-8 h-8 animate-spin text-ai" />
                         <p className="text-sm text-muted-foreground">Scanning receipt...</p>
                     </div>
                 ) : (
@@ -130,9 +144,9 @@ function OCRSection({ onUseData }: { onUseData: (data: InitialTransactionData) =
                     >
                         <Card className="p-4 space-y-3">
                             <div className="flex items-center gap-2">
-                                <ReceiptText className="w-4 h-4 text-primary" />
+                                <ReceiptText className="w-4 h-4 text-ai" />
                                 <h4 className="font-semibold text-sm">Extracted Data</h4>
-                                <Badge variant="secondary" className="text-xs ml-auto">
+                                <Badge variant="secondary" className="text-xs ml-auto badge-ai">
                                     {result.confidence} confidence
                                 </Badge>
                             </div>
@@ -147,7 +161,10 @@ function OCRSection({ onUseData }: { onUseData: (data: InitialTransactionData) =
                                 {result.amount && (
                                     <div>
                                         <p className="text-xs text-muted-foreground">Amount</p>
-                                        <p className="font-medium text-primary">
+                                        {/* <p className="font-medium text-primary">
+                                            ₹{result.amount.toLocaleString("en-IN")}
+                                        </p> */}
+                                        <p className="font-medium text-primary font-amount">
                                             ₹{result.amount.toLocaleString("en-IN")}
                                         </p>
                                     </div>
@@ -258,7 +275,7 @@ function ChatSection() {
     }
 
     return (
-        <div className="flex flex-col h-[500px]">
+        <div className="flex flex-col h-125">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
                 {messages.map((msg, i) => (
@@ -272,9 +289,9 @@ function ChatSection() {
                         )}
                     >
                         <div className={cn(
-                            "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0",
+                            "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
                             msg.role === "assistant"
-                                ? "bg-primary/10 text-primary"
+                                ? "bg-ai/10 text-ai"
                                 : "bg-muted text-muted-foreground"
                         )}>
                             {msg.role === "assistant"
@@ -295,8 +312,8 @@ function ChatSection() {
 
                 {loading && (
                     <div className="flex items-start gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Bot className="w-3.5 h-3.5 text-primary" />
+                        <div className="w-7 h-7 rounded-full bg-ai/10 flex items-center justify-center">
+                            <Bot className="w-3.5 h-3.5 text-ai" />
                         </div>
                         <div className="bg-muted rounded-xl px-3.5 py-2.5">
                             <div className="flex gap-1">
@@ -465,12 +482,19 @@ function SemanticSearchSection() {
                             {results.length} result{results.length !== 1 ? "s" : ""} for &quot;{searchedQuery}&quot;
                         </p>
                         {results.map((result, i) => {
+                            // const amountColor =
+                            //     result.transaction_type === "income"
+                            //         ? "text-green-600 dark:text-green-400"
+                            //         : result.transaction_type === "transfer"
+                            //             ? "text-orange-500 dark:text-orange-400"
+                            //             : "text-red-600 dark:text-red-400"
+
                             const amountColor =
                                 result.transaction_type === "income"
-                                    ? "text-green-600 dark:text-green-400"
+                                    ? "text-income"
                                     : result.transaction_type === "transfer"
-                                        ? "text-orange-500 dark:text-orange-400"
-                                        : "text-red-600 dark:text-red-400"
+                                        ? "text-warning"
+                                        : "text-expense"
 
                             const prefix =
                                 result.transaction_type === "income" ? "+" :
@@ -488,7 +512,7 @@ function SemanticSearchSection() {
                                 >
                                     {/* Category icon */}
                                     <div
-                                        className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
+                                        className="w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0"
                                         style={{ backgroundColor: `${result.category_color ?? "#94A3B8"}20` }}
                                     >
                                         {result.category_icon ?? "📦"}
@@ -505,7 +529,7 @@ function SemanticSearchSection() {
                                             <div className="flex items-center gap-1 ml-auto">
                                                 <div className="w-16 bg-muted rounded-full h-1">
                                                     <div
-                                                        className="h-1 rounded-full bg-primary"
+                                                        className="h-1 rounded-full bg-ai"
                                                         style={{ width: `${similarityPct}%` }}
                                                     />
                                                 </div>
@@ -517,7 +541,7 @@ function SemanticSearchSection() {
                                     </div>
 
                                     {/* Amount */}
-                                    <span className={`text-sm font-semibold flex-shrink-0 ${amountColor}`}>
+                                    <span className={`text-sm font-semibold shrink-0 font-amount ${amountColor}`}>
                                         {prefix}{symbol}{result.amount_display.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                     </span>
                                 </motion.div>
@@ -550,10 +574,199 @@ function SemanticSearchSection() {
 }
 
 // ================================
+// NEW: Recurring Section
+//
+// Pure statistical pattern-matching (no LLM call), so this uses --primary
+// (blue) rather than --ai (purple) — keeping "purple = AI-generated content"
+// an honest signal rather than applying it to every tab on this page
+// regardless of whether AI actually produced the content.
+// ================================
+function RecurringSection() {
+    const { data, isLoading } = useQuery({
+        queryKey: ["ai-recurring"],
+        queryFn: aiService.getRecurring,
+        staleTime: 5 * 60 * 1000,
+    })
+
+    if (isLoading) {
+        return (
+            <div className="space-y-3">
+                {Array(3).fill(0).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                ))}
+            </div>
+        )
+    }
+
+    const patterns = data?.patterns ?? []
+
+    if (patterns.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Repeat className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium">No recurring patterns detected yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                    Add more transactions over time to detect subscriptions and bills
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-2">
+            {patterns.map((pattern, i) => (
+                <motion.div
+                    key={pattern.merchant}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+                >
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Repeat className="w-4 h-4 text-primary" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium capitalize truncate">{pattern.merchant}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="secondary" className="text-[10px] capitalize px-1.5 py-0 h-4">
+                                {pattern.period}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                                {pattern.occurrences} occurrences
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold font-amount">
+                            ₹{pattern.avg_amount.toLocaleString("en-IN")}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end mt-0.5">
+                            <CalendarClock className="w-3 h-3" />
+                            Next: {pattern.next_expected}
+                        </p>
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    )
+}
+
+// ================================
+// NEW: Anomalies Section
+//
+// Unlike Recurring above, the `explanation` field here IS genuinely
+// LLM-generated (via Groq in anomaly.py), so it gets the badge-ai treatment
+// specifically on that explanation line — not the whole card, to keep the
+// distinction between "AI wrote this sentence" and "this is just a flagged
+// transaction" visually clear.
+// ================================
+function AnomaliesSection() {
+    const { data, isLoading } = useQuery({
+        queryKey: ["ai-anomalies"],
+        queryFn: () => aiService.getAnomalies(30),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    if (isLoading) {
+        return (
+            <div className="space-y-3">
+                {Array(3).fill(0).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full rounded-lg" />
+                ))}
+            </div>
+        )
+    }
+
+    const anomalies = data?.anomalies ?? []
+
+    if (anomalies.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-12 h-12 rounded-full bg-income/10 flex items-center justify-center mb-3">
+                    <AlertTriangle className="w-5 h-5 text-income" />
+                </div>
+                <p className="text-sm font-medium">No anomalies detected</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                    Your spending looks normal for the last 30 days
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+                Scanning the last 30 days · {anomalies.length} unusual transaction{anomalies.length !== 1 ? "s" : ""}
+            </p>
+            {anomalies.map((a, i) => (
+                <motion.div
+                    key={a.transaction_id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="p-3 rounded-lg border border-border space-y-2"
+                >
+                    <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-full bg-expense/10 flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-4 h-4 text-expense" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{a.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {a.category} · {a.date}
+                            </p>
+                        </div>
+                        <span className="text-sm font-semibold text-expense font-amount shrink-0">
+                            ₹{a.amount.toLocaleString("en-IN")}
+                        </span>
+                    </div>
+                    <div className="badge-ai rounded-md px-2.5 py-1.5 text-xs flex items-start gap-1.5">
+                        <Sparkles className="w-3 h-3 mt-0.5 shrink-0" />
+                        <span>{a.explanation}</span>
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    )
+}
+
+// ================================
 // Main Page
 // ================================
-export default function AIInsightsPage() {
-    const [activeTab, setActiveTab] = useState<"insights" | "chat" | "ocr"| "search">("insights")
+// export default function AIInsightsPage() {
+//     const [activeTab, setActiveTab] = useState < "insights" | "chat" | "ocr" | "search" | "recurring" | "anomalies">("insights")
+
+//     // State for the Add Transaction modal, opened from OCR scan results.
+//     // Lives at the page level so it can be triggered from inside OCRSection.
+//     const [addOpen, setAddOpen] = useState(false)
+//     const [addTransactionData, setAddTransactionData] = useState<InitialTransactionData | null>(null)
+
+//     const tabs = [
+//         { id: "insights", label: "Insights", icon: TrendingUp },
+//         { id: "chat", label: "Chat", icon: Bot },
+//         { id: "ocr", label: "Receipt Scanner", icon: ReceiptText },
+//         { id: "search", label: "Smart Search", icon: Search },
+//         { id: "recurring", label: "Recurring", icon: Repeat },
+//         { id: "anomalies", label: "Anomalies", icon: AlertTriangle },
+//     ] as const
+
+function AIInsightsPageContent() {
+    const searchParams = useSearchParams()
+
+    // NEW: allows links like /ai-insights?tab=anomalies (used by the
+    // notification bell in topbar.tsx) to open directly on that tab instead
+    // of always landing on the default "Insights" tab. Falls back to
+    // "insights" for missing/invalid values rather than trusting the URL.
+    const VALID_TABS = ["insights", "chat", "ocr", "search", "recurring", "anomalies"] as const
+    type TabId = typeof VALID_TABS[number]
+    const tabParam = searchParams.get("tab")
+    const initialTab: TabId = VALID_TABS.includes(tabParam as TabId) ? (tabParam as TabId) : "insights"
+
+    const [activeTab, setActiveTab] = useState<TabId>(initialTab)
 
     // State for the Add Transaction modal, opened from OCR scan results.
     // Lives at the page level so it can be triggered from inside OCRSection.
@@ -565,13 +778,15 @@ export default function AIInsightsPage() {
         { id: "chat", label: "Chat", icon: Bot },
         { id: "ocr", label: "Receipt Scanner", icon: ReceiptText },
         { id: "search", label: "Smart Search", icon: Search },
+        { id: "recurring", label: "Recurring", icon: Repeat },
+        { id: "anomalies", label: "Anomalies", icon: AlertTriangle },
     ] as const
 
     return (
         <div className="space-y-6 page-enter">
             <div>
                 <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-primary" />
+                    <Sparkles className="w-6 h-6 text-ai" />
                     AI Insights
                 </h2>
                 <p className="text-muted-foreground text-sm mt-1">
@@ -625,6 +840,8 @@ export default function AIInsightsPage() {
                             />
                         )}
                         {activeTab === "search" && <SemanticSearchSection />}
+                        {activeTab === "recurring" && <RecurringSection />}
+                        {activeTab === "anomalies" && <AnomaliesSection />}
                     </motion.div>
                 </AnimatePresence>
             </Card>
@@ -638,5 +855,17 @@ export default function AIInsightsPage() {
                 initialData={addTransactionData}
             />
         </div>
+    )
+}
+
+//NOTE: Next.js requires useSearchParams() (used inside AIInsightsPageContent for
+// the ?tab= deep-link) to be wrapped in a Suspense boundary, or static
+// analysis during `next build` can fail. The fallback is intentionally
+// minimal since this resolves almost instantly on the client.
+export default function AIInsightsPage() {
+    return (
+        <Suspense fallback={null}>
+            <AIInsightsPageContent />
+        </Suspense>
     )
 }

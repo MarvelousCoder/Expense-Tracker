@@ -22,7 +22,8 @@ class CategoryRepository:
                     Category.user_id.is_(None),     # global defaults
                     Category.user_id == user_id      # user's custom ones
                 ),
-                Category.is_active is True
+                # Category.is_active is True
+                Category.is_active.is_(True)
             ).order_by(Category.user_id.asc().nullsfirst(), Category.name.asc())
         )
         return list(result.scalars().all())

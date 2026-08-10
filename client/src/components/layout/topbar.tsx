@@ -19,6 +19,7 @@ import {
 import {
     Bell, Menu, LogOut,
     Settings, TrendingUp, AlertTriangle,
+    Repeat,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -28,11 +29,17 @@ import {
 import { cn } from "@/lib/utils"
 import { APP_NAME } from "@/constants"
 import { useBudgets } from "@/hooks/useBudgets"
+import { useQuery } from "@tanstack/react-query"
+import { aiService } from "@/services/ai.service"
 
 const iconMap = {
     LayoutDashboard, ArrowLeftRight, Target,
     BarChart3, Sparkles, Settings,
 } as const
+
+// Recurring patterns whose next expected charge falls within this many days
+// are surfaced as "upcoming bill" notifications.
+const UPCOMING_BILL_WINDOW_DAYS = 7
 
 interface TopbarProps {
     onLogout: () => void
@@ -42,6 +49,20 @@ export function Topbar({ onLogout }: TopbarProps) {
     const pathname = usePathname()
     const { user } = useAuthStore()
     const { data: budgets = [] } = useBudgets()
+    // NEW: same query keys used in ai-insights/page.tsx's RecurringSection /
+    // AnomaliesSection — React Query dedupes by key, so this shares cache
+    // with that page rather than firing duplicate requests when both are
+    // mounted, and avoids re-fetching on every navigation within staleTime.
+    const { data: anomalyData } = useQuery({
+        queryKey: ["ai-anomalies"],
+        queryFn: () => aiService.getAnomalies(30),
+        staleTime: 5 * 60 * 1000,
+    })
+    const { data: recurringData } = useQuery({
+        queryKey: ["ai-recurring"],
+        queryFn: aiService.getRecurring,
+        staleTime: 5 * 60 * 1000,
+    })
 
     const currentPage = NAV_ITEMS.find(
         (item) => pathname === item.href ||
@@ -60,6 +81,19 @@ export function Topbar({ onLogout }: TopbarProps) {
     // Budget alerts — budgets that have crossed their alert threshold or exceeded limit
     const alertBudgets = budgets.filter((b) => b.is_alert || b.is_exceeded)
     const alertCount = alertBudgets.length
+
+    // NEW: anomalous transactions from the last 30 days
+    const anomalies = anomalyData?.anomalies ?? []
+
+    // NEW: recurring patterns due within the next 7 days
+    const now = new Date()
+    const upcomingRecurring = (recurringData?.patterns ?? []).filter((p) => {
+        const nextDate = new Date(p.next_expected)
+        const diffDays = (nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        return diffDays >= 0 && diffDays <= UPCOMING_BILL_WINDOW_DAYS
+    })
+
+    const totalCount = alertBudgets.length + anomalies.length + upcomingRecurring.length
 
     return (
         <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40 flex items-center px-4 md:px-6 gap-4">
@@ -98,7 +132,7 @@ export function Topbar({ onLogout }: TopbarProps) {
                                     <Icon className="h-4 w-4" />
                                     {item.label}
                                     {item.label === "AI Insights" && (
-                                        <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-0">
+                                        <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 badge-ai">
                                             AI
                                         </Badge>
                                     )}
@@ -136,14 +170,14 @@ export function Topbar({ onLogout }: TopbarProps) {
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative rounded-full w-9 h-9">
                             <Bell className="h-4 w-4" />
-                            {alertCount > 0 && (
+                            {totalCount > 0 && (
                                 <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] font-bold flex items-center justify-center">
-                                    {alertCount > 9 ? "9+" : alertCount}
+                                    {totalCount > 9 ? "9+" : totalCount}
                                 </span>
                             )}
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-72">
+                    {/* <DropdownMenuContent align="end" className="w-72">
                         <DropdownMenuLabel className="font-medium">
                             Budget Alerts
                         </DropdownMenuLabel>
@@ -196,6 +230,136 @@ export function Topbar({ onLogout }: TopbarProps) {
                                         View all budgets
                                     </Link>
                                 </DropdownMenuItem>
+                            </>
+                        )}
+                    </DropdownMenuContent> */}
+                    <DropdownMenuContent align="end" className="w-80 max-h-112 overflow-y-auto">
+                        {totalCount === 0 ? (
+                            <div className="px-3 py-6 text-center">
+                                <p className="text-sm text-muted-foreground">
+                                    You&apos;re all caught up
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* ── Budget Alerts ── */}
+                                {alertBudgets.length > 0 && (
+                                    <>
+                                        <DropdownMenuLabel className="font-medium text-xs text-muted-foreground">
+                                            Budget Alerts
+                                        </DropdownMenuLabel>
+                                        {alertBudgets.slice(0, 3).map((budget) => (
+                                            <DropdownMenuItem key={budget.id} asChild>
+                                                <Link href="/budgets" className="cursor-pointer">
+                                                    <div className="flex items-start gap-2.5 w-full py-0.5">
+                                                        <div
+                                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0 mt-0.5"
+                                                            style={{ backgroundColor: `${budget.category_color ?? "#6366F1"}20` }}
+                                                        >
+                                                            {budget.category_icon ?? "💰"}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium truncate">
+                                                                {budget.name}
+                                                            </p>
+                                                            {/* FIXED: hardcoded ₹ → currencySymbol (was ignoring
+                                                                USD users entirely), yellow-600/500 → text-warning
+                                                                token, added font-amount for tabular figures */}
+                                                            <p className={cn(
+                                                                "text-xs font-amount",
+                                                                budget.is_exceeded
+                                                                    ? "text-destructive"
+                                                                    : "text-warning"
+                                                            )}>
+                                                                {budget.is_exceeded
+                                                                    ? `Exceeded by ${currencySymbol}${(budget.spent - budget.amount_display).toLocaleString("en-IN")}`
+                                                                    : `${budget.percentage}% of budget used`
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                        <AlertTriangle className={cn(
+                                                            "w-3.5 h-3.5 shrink-0 mt-1",
+                                                            budget.is_exceeded ? "text-destructive" : "text-warning"
+                                                        )} />
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ))}
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/budgets" className="cursor-pointer text-xs text-muted-foreground justify-center">
+                                                View all budgets
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+
+                                {/* ── NEW: Anomalies ── */}
+                                {anomalies.length > 0 && (
+                                    <>
+                                        {alertBudgets.length > 0 && <DropdownMenuSeparator />}
+                                        <DropdownMenuLabel className="font-medium text-xs text-muted-foreground">
+                                            Unusual Spending
+                                        </DropdownMenuLabel>
+                                        {anomalies.slice(0, 3).map((a) => (
+                                            <DropdownMenuItem key={a.transaction_id} asChild>
+                                                <Link href="/ai-insights?tab=anomalies" className="cursor-pointer">
+                                                    <div className="flex items-start gap-2.5 w-full py-0.5">
+                                                        <div className="w-7 h-7 rounded-lg bg-expense/10 flex items-center justify-center shrink-0 mt-0.5">
+                                                            <AlertTriangle className="w-3.5 h-3.5 text-expense" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium truncate">
+                                                                {a.description}
+                                                            </p>
+                                                            <p className="text-xs text-expense font-amount">
+                                                                {currencySymbol}{a.amount.toLocaleString("en-IN")} · {a.category}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ))}
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/ai-insights?tab=anomalies" className="cursor-pointer text-xs text-muted-foreground justify-center">
+                                                View all anomalies
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+
+                                {/* ── NEW: Upcoming recurring bills ── */}
+                                {upcomingRecurring.length > 0 && (
+                                    <>
+                                        {(alertBudgets.length > 0 || anomalies.length > 0) && <DropdownMenuSeparator />}
+                                        <DropdownMenuLabel className="font-medium text-xs text-muted-foreground">
+                                            Upcoming Bills
+                                        </DropdownMenuLabel>
+                                        {upcomingRecurring.slice(0, 3).map((p) => (
+                                            <DropdownMenuItem key={p.merchant} asChild>
+                                                <Link href="/ai-insights?tab=recurring" className="cursor-pointer">
+                                                    <div className="flex items-start gap-2.5 w-full py-0.5">
+                                                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                                            <Repeat className="w-3.5 h-3.5 text-primary" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-medium capitalize truncate">
+                                                                {p.merchant}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground font-amount">
+                                                                {currencySymbol}{p.avg_amount.toLocaleString("en-IN")} · due {p.next_expected}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </DropdownMenuItem>
+                                        ))}
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/ai-insights?tab=recurring" className="cursor-pointer text-xs text-muted-foreground justify-center">
+                                                View all recurring
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </>
                         )}
                     </DropdownMenuContent>

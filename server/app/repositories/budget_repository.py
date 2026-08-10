@@ -18,16 +18,6 @@ class BudgetRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    # async def create(self, user_id: UUID, data: BudgetCreate) -> Budget:
-    #     budget = Budget(
-    #         user_id=user_id,
-    #         **data.model_dump()
-    #     )
-    #     self.db.add(budget)
-    #     await self.db.flush()
-    #     await self.db.refresh(budget)
-    #     return budget
-
     async def create(self, user_id: UUID, data: BudgetCreate) -> Budget:
         budget = Budget(
         user_id=user_id,
@@ -67,7 +57,7 @@ class BudgetRepository:
         conditions = [
             Budget.user_id == user_id,
             Budget.period == period,
-            Budget.is_active is True,
+            Budget.is_active.is_(True),
         ]
 
         if category_id is None:
@@ -89,7 +79,7 @@ class BudgetRepository:
             .options(selectinload(Budget.category))
             .where(
                 Budget.user_id == user_id,
-                Budget.is_active is True
+                Budget.is_active.is_(True)
             )
             .order_by(Budget.created_at.desc())
         )
@@ -142,23 +132,9 @@ class BudgetRepository:
             start = today - timedelta(days=today.weekday())
             end = start + timedelta(days=7)
 
-        # elif period == BudgetPeriod.YEARLY:
-        #     start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-        #     end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
         elif period == BudgetPeriod.YEARLY:
             start = today.replace(month=1, day=1)
             end = today.replace(month=12, day=31)
-
-        # else:
-        #     # MONTHLY — default
-        #     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        #     # First day of next month
-        #     if now.month == 12:
-        #         end = now.replace(year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-        #     else:
-        #         end = now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        # return start, end
 
         else:
             # MONTHLY — default
