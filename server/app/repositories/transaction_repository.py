@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.account import Account
+from app.models.category import Category
 from app.models.transaction import Transaction, TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
-from app.models.category import Category
 
 
 class TransactionRepository:
