@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.models.account import Account
 from app.models.transaction import Transaction, TransactionType
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
+from app.models.category import Category
 
 
 class TransactionRepository:
@@ -234,6 +235,23 @@ class TransactionRepository:
         )
         total_balance = balance_result.scalar_one() or 0
 
+         # added — lifetime total of income specifically categorized as "Salary".
+        # Joined against the global Salary category (user_id is NULL) so this
+        # only ever matches the one seeded category, never a same-named
+        # category some other user might create for themselves.
+        salary_result = await self.db.execute(
+            select(func.sum(Transaction.amount))
+            .join(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                Transaction.transaction_type == TransactionType.INCOME,
+                Category.name == "Salary",
+                Category.user_id.is_(None),
+            )
+        )
+        total_salary_earned = salary_result.scalar_one() or 0
+
         curr_income = current.get(TransactionType.INCOME, 0)
          # Transfer counts as expense — it reduces spendable balance just like a regular expense
         curr_expense = current.get(TransactionType.EXPENSE, 0) + current.get(TransactionType.TRANSFER, 0)
@@ -253,4 +271,5 @@ class TransactionRepository:
             "total_savings": (curr_income - curr_expense) / 100,
             "income_change_pct": pct_change(curr_income, prev_income),
             "expense_change_pct": pct_change(curr_expense, prev_expense),
+            "total_salary_earned": total_salary_earned / 100,
         }

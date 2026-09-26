@@ -400,7 +400,7 @@ export default function DashboardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
               >
-                <Card className="p-5 card-hover cursor-default">
+                <Card className="p-5 card-hover cursor-default h-full flex flex-col">
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
                       <Icon className={`w-4 h-4 ${card.color}`} />
@@ -416,8 +416,15 @@ export default function DashboardPage() {
                       {card.change}
                     </Badge>
                   </div>
+                  {/* <p className="text-2xl font-bold tracking-tight font-amount">{card.value}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{card.label}</p> */}
                   <p className="text-2xl font-bold tracking-tight font-amount">{card.value}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">{card.label}</p>
+                  {card.label === "Total Balance" && (
+                    <p className="text-xs text-muted-foreground/70 mt-auto pt-1">
+                      Total salary earned: {formatAmount(summary?.total_salary_earned ?? 0)}
+                    </p>
+                  )}
                 </Card>
               </motion.div>
             )

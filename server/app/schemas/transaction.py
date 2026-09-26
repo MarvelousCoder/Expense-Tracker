@@ -76,6 +76,7 @@ class DashboardSummary(BaseModel):
     total_savings: float
     income_change_pct: float = 0.0
     expense_change_pct: float = 0.0
+    total_salary_earned: float = 0.0   # added — lifetime sum of income tagged under the "Salary" category
 
 # ================================
 # Bulk Import
