@@ -2,6 +2,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { useState } from "react"  // — added for notifOpen state
 import { NAV_ITEMS } from "@/constants"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { useAuthStore } from "@/store/auth.store"
@@ -49,6 +50,12 @@ export function Topbar({ onLogout }: TopbarProps) {
     const pathname = usePathname()
     const { user } = useAuthStore()
     const { data: budgets = [] } = useBudgets()
+    // CHANGED — tracks whether the notification bell dropdown is open.
+    // The two AI queries below are gated on this so they only fire once
+    // the user actually opens the bell, instead of on every dashboard
+    // page load (this was the main cause of the "everything loads at
+    // once" slowness — anomaly/recurring detection are AI-backed calls).
+    const [notifOpen, setNotifOpen] = useState(false)
     // NEW: same query keys used in ai-insights/page.tsx's RecurringSection /
     // AnomaliesSection — React Query dedupes by key, so this shares cache
     // with that page rather than firing duplicate requests when both are
@@ -57,11 +64,13 @@ export function Topbar({ onLogout }: TopbarProps) {
         queryKey: ["ai-anomalies"],
         queryFn: () => aiService.getAnomalies(30),
         staleTime: 5 * 60 * 1000,
+        enabled: notifOpen,   // CHANGED — was eager, now only runs once the bell is opened
     })
     const { data: recurringData } = useQuery({
         queryKey: ["ai-recurring"],
         queryFn: aiService.getRecurring,
         staleTime: 5 * 60 * 1000,
+        enabled: notifOpen,
     })
 
     const currentPage = NAV_ITEMS.find(
@@ -165,8 +174,9 @@ export function Topbar({ onLogout }: TopbarProps) {
                     <Bell className="h-4 w-4" />
                     <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />
                 </Button> */}
+
                 {/* Notification bell — wired to budget alerts */}
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={setNotifOpen}>  {/* CHANGED — was <DropdownMenu>, now tracks open state */}
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative rounded-full w-9 h-9">
                             <Bell className="h-4 w-4" />
