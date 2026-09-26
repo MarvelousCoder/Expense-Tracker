@@ -395,11 +395,13 @@ import {
   Upload,
 } from "lucide-react"
 import { transactionService } from "@/services/transaction.service"
-import { format } from "date-fns"
+import { format, subDays, subMonths } from "date-fns"
 import { EditTransactionModal } from "@/components/forms/edit-transaction-modal"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ImportCSVModal } from "@/components/forms/import-csv-modal"
 
+// added — new type for the date-range filter options
+type DateRangeOption = "all" | "7d" | "15d" | "1m" | "custom"
 
 // ─── Delete Confirmation Dialog ────────────────────────────────────────────────
 function DeleteTransactionDialog({ transaction, onConfirm, onCancel }: {
@@ -448,12 +450,45 @@ export default function TransactionsPage() {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const symbol = user?.currency === "USD" ? "$" : "₹"
   const [importOpen, setImportOpen] = useState(false)
+  // added — new state for date-range filtering
+  const [dateRangeOption, setDateRangeOption] = useState<DateRangeOption>("all")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
+
+  // CHANGED — derives actual start_date/end_date strings to send to the API,
+  // based on whichever preset (or custom range) is currently selected.
+  // Computed fresh on every render rather than stored in state, so there's
+  // no separate "today" to keep in sync — it's always relative to now.
+  const getDateRange = (): { start_date?: string; end_date?: string } => {
+    const today = new Date()
+    const todayStr = format(today, "yyyy-MM-dd")
+
+    switch (dateRangeOption) {
+      case "7d":
+        return { start_date: format(subDays(today, 7), "yyyy-MM-dd"), end_date: todayStr }
+      case "15d":
+        return { start_date: format(subDays(today, 15), "yyyy-MM-dd"), end_date: todayStr }
+      case "1m":
+        return { start_date: format(subMonths(today, 1), "yyyy-MM-dd"), end_date: todayStr }
+      case "custom":
+        return {
+          start_date: customStartDate || undefined,
+          end_date: customEndDate || undefined,
+        }
+      default:
+        return {}
+    }
+  }
+
+  const { start_date, end_date } = getDateRange()  // CHANGED
 
   const { data, isLoading } = useTransactions({
     page,
     per_page: 15,
     search: search || undefined,
     transaction_type: typeFilter || undefined,
+    start_date,   // CHANGED
+    end_date,     // CHANGED
   })
 
   const { mutate: deleteTransaction } = useDeleteTransaction()
@@ -462,6 +497,13 @@ export default function TransactionsPage() {
     if (!deletingTransaction) return
     deleteTransaction(deletingTransaction.id)
     setDeletingTransaction(null)
+  }
+
+  // added — small helper so every date-range button resets to page 1,
+  // same as your existing search/type filters already do
+  const handleDateRangeSelect = (option: DateRangeOption) => {
+    setDateRangeOption(option)
+    setPage(1)
   }
 
   const columns: ColumnDef<Transaction>[] = [
@@ -482,7 +524,7 @@ export default function TransactionsPage() {
         return (
           <div className="flex items-center gap-2.5">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
               style={{ backgroundColor: `${t.category_color ?? "#6366F1"}20` }}
             >
               {t.category_icon ?? "📦"}
@@ -633,6 +675,47 @@ export default function TransactionsPage() {
               </Button>
             ))}
           </div>
+        </div>
+        {/* added — new date-range filter row */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 pt-3 border-t border-border">
+          <div className="flex gap-2 flex-wrap">
+            {([
+              ["all", "All time"],
+              ["7d", "7 Days"],
+              ["15d", "15 Days"],
+              ["1m", "1 Month"],
+              ["custom", "Custom"],
+            ] as [DateRangeOption, string][]).map(([value, label]) => (
+              <Button
+                key={value}
+                variant={dateRangeOption === value ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleDateRangeSelect(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          {dateRangeOption === "custom" && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => { setCustomStartDate(e.target.value); setPage(1) }}
+                className="w-auto"
+                max={customEndDate || undefined}
+              />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => { setCustomEndDate(e.target.value); setPage(1) }}
+                className="w-auto"
+                min={customStartDate || undefined}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
