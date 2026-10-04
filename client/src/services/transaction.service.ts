@@ -38,6 +38,8 @@ export interface DashboardSummary {
     income_change_pct: number
     expense_change_pct: number
     total_salary_earned: number
+    savings_change_pct: number   
+    balance_change_pct: number
 }
 
 export interface AnalyticsSummary {

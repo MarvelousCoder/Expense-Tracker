@@ -321,8 +321,9 @@ export default function DashboardPage() {
     {
       label: "Total Balance",
       value: formatAmount(summary?.total_balance ?? 0),
-      change: `${summary?.income_change_pct ?? 0}%`,
-      trend: "up" as const,
+      // change: `${summary?.income_change_pct ?? 0}%`,
+      // trend: "up" as const,
+      change: summary?.balance_change_pct ?? 0,
       icon: Wallet,
       color: "text-primary",
       bg: "bg-primary/10",
@@ -330,8 +331,9 @@ export default function DashboardPage() {
     {
       label: "Monthly Income",
       value: formatAmount(summary?.monthly_income ?? 0),
-      change: `+${summary?.income_change_pct ?? 0}%`,
-      trend: "up" as const,
+      // change: `+${summary?.income_change_pct ?? 0}%`,
+      // trend: "up" as const,
+      change: summary?.income_change_pct ?? 0,
       icon: TrendingUp,
       color: "text-income",
       bg: "bg-income/10",
@@ -339,8 +341,8 @@ export default function DashboardPage() {
     {
       label: "Monthly Expenses",
       value: formatAmount(summary?.monthly_expenses ?? 0),
-      change: `${summary?.expense_change_pct ?? 0}%`,
-      trend: "down" as const,
+      change: summary?.expense_change_pct ?? 0,
+      // trend: "down" as const,
       icon: TrendingDown,
       color: "text-expense",
       bg: "bg-expense/10",
@@ -348,8 +350,9 @@ export default function DashboardPage() {
     {
       label: "Monthly Savings",
       value: formatAmount(summary?.total_savings ?? 0),
-      change: "+0%",
-      trend: "up" as const,
+      // change: "+0%",
+      // trend: "up" as const,
+      change: summary?.savings_change_pct ?? 0,
       icon: PiggyBank,
       color: "text-warning",
       bg: "bg-warning/10",
@@ -392,7 +395,12 @@ export default function DashboardPage() {
           ? Array(4).fill(0).map((_, i) => <SummaryCardSkeleton key={i} />)
           : summaryCards.map((card, i) => {
             const Icon = card.icon
-            const TrendIcon = card.trend === "up" ? ArrowUpRight : ArrowDownRight
+            // CHANGED — trend is now derived from the actual sign of `card.change`
+            // (positive → up arrow + income/green styling, negative → down arrow +
+            // expense/red styling) instead of a hardcoded "up"/"down" string that
+            // didn't necessarily match the real number.
+            const isPositive = (card.change ?? 0) >= 0
+            const TrendIcon = isPositive ? ArrowUpRight : ArrowDownRight
             return (
               <motion.div
                 key={card.label}
@@ -405,16 +413,20 @@ export default function DashboardPage() {
                     <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
                       <Icon className={`w-4 h-4 ${card.color}`} />
                     </div>
+                    {card.change !== null && (
                     <Badge
                       variant="secondary"
-                      className={`text-xs flex items-center gap-0.5 border-0 ${card.trend === "up"
+                      className={`text-xs flex items-center gap-0.5 border-0 ${isPositive
                         ? "text-income bg-income/10"
                         : "text-expense bg-expense/10"
                         }`}
                     >
                       <TrendIcon className="w-3 h-3" />
-                      {card.change}
+                        {/* CHANGED — no hardcoded "+", the number's own sign shows
+                            through naturally (e.g. "-100%", "12.5%"). */}
+                        {card.change}%
                     </Badge>
+                    )}
                   </div>
                   {/* <p className="text-2xl font-bold tracking-tight font-amount">{card.value}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">{card.label}</p> */}

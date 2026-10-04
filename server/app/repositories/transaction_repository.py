@@ -263,6 +263,17 @@ class TransactionRepository:
                 return 0.0
             return round(((current - previous) / previous) * 100, 1)
 
+        # NEW — savings change: this month's net (income - expense) vs last
+        # month's net, same pct_change pattern already used for income/expense.
+        curr_savings = curr_income - curr_expense
+        prev_savings = prev_income - prev_expense
+
+        # NEW — balance change: "previous balance" isn't stored anywhere, so
+        # we derive it by working backward from today's balance — subtracting
+        # this month's net change gives us what the balance was before this
+        # month's activity happened.
+        prev_balance = total_balance - curr_savings
+
         return {
             "total_balance": total_balance / 100,
             "monthly_income": curr_income / 100,
@@ -272,4 +283,6 @@ class TransactionRepository:
             "income_change_pct": pct_change(curr_income, prev_income),
             "expense_change_pct": pct_change(curr_expense, prev_expense),
             "total_salary_earned": total_salary_earned / 100,
+            "savings_change_pct": pct_change(curr_savings, prev_savings),
+            "balance_change_pct": pct_change(total_balance, prev_balance),
         }
