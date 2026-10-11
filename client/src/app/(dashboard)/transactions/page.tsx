@@ -1,3 +1,4 @@
+
 // // src/app/(dashboard)/transactions/page.tsx
 // "use client"
 
@@ -26,11 +27,13 @@
 //   Upload,
 // } from "lucide-react"
 // import { transactionService } from "@/services/transaction.service"
-// import { format } from "date-fns"
+// import { format, subDays, subMonths } from "date-fns"
 // import { EditTransactionModal } from "@/components/forms/edit-transaction-modal"
 // import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 // import { ImportCSVModal } from "@/components/forms/import-csv-modal"
 
+// // added — new type for the date-range filter options
+// type DateRangeOption = "all" | "7d" | "15d" | "1m" | "custom"
 
 // // ─── Delete Confirmation Dialog ────────────────────────────────────────────────
 // function DeleteTransactionDialog({ transaction, onConfirm, onCancel }: {
@@ -79,12 +82,45 @@
 //   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
 //   const symbol = user?.currency === "USD" ? "$" : "₹"
 //   const [importOpen, setImportOpen] = useState(false)
+//   // added — new state for date-range filtering
+//   const [dateRangeOption, setDateRangeOption] = useState<DateRangeOption>("all")
+//   const [customStartDate, setCustomStartDate] = useState("")
+//   const [customEndDate, setCustomEndDate] = useState("")
+
+//   // CHANGED — derives actual start_date/end_date strings to send to the API,
+//   // based on whichever preset (or custom range) is currently selected.
+//   // Computed fresh on every render rather than stored in state, so there's
+//   // no separate "today" to keep in sync — it's always relative to now.
+//   const getDateRange = (): { start_date?: string; end_date?: string } => {
+//     const today = new Date()
+//     const todayStr = format(today, "yyyy-MM-dd")
+
+//     switch (dateRangeOption) {
+//       case "7d":
+//         return { start_date: format(subDays(today, 7), "yyyy-MM-dd"), end_date: todayStr }
+//       case "15d":
+//         return { start_date: format(subDays(today, 15), "yyyy-MM-dd"), end_date: todayStr }
+//       case "1m":
+//         return { start_date: format(subMonths(today, 1), "yyyy-MM-dd"), end_date: todayStr }
+//       case "custom":
+//         return {
+//           start_date: customStartDate || undefined,
+//           end_date: customEndDate || undefined,
+//         }
+//       default:
+//         return {}
+//     }
+//   }
+
+//   const { start_date, end_date } = getDateRange()  // CHANGED
 
 //   const { data, isLoading } = useTransactions({
 //     page,
 //     per_page: 15,
 //     search: search || undefined,
 //     transaction_type: typeFilter || undefined,
+//     start_date,   // CHANGED
+//     end_date,     // CHANGED
 //   })
 
 //   const { mutate: deleteTransaction } = useDeleteTransaction()
@@ -93,6 +129,13 @@
 //     if (!deletingTransaction) return
 //     deleteTransaction(deletingTransaction.id)
 //     setDeletingTransaction(null)
+//   }
+
+//   // added — small helper so every date-range button resets to page 1,
+//   // same as your existing search/type filters already do
+//   const handleDateRangeSelect = (option: DateRangeOption) => {
+//     setDateRangeOption(option)
+//     setPage(1)
 //   }
 
 //   const columns: ColumnDef<Transaction>[] = [
@@ -113,7 +156,7 @@
 //         return (
 //           <div className="flex items-center gap-2.5">
 //             <div
-//               className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+//               className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0"
 //               style={{ backgroundColor: `${t.category_color ?? "#6366F1"}20` }}
 //             >
 //               {t.category_icon ?? "📦"}
@@ -140,10 +183,10 @@
 //         <Badge
 //           variant="secondary"
 //           className={`capitalize text-xs border-0 ${row.original.transaction_type === "income"
-//               ? "bg-green-500/10 text-green-600 dark:text-green-400"
-//               : row.original.transaction_type === "expense"
-//                 ? "bg-red-500/10 text-red-600 dark:text-red-400"
-//                 : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+//             ? "bg-income/10 text-income"
+//             : row.original.transaction_type === "expense"
+//               ? "bg-expense/10 text-expense"
+//               : "bg-warning/10 text-warning"
 //             }`}
 //         >
 //           {row.original.transaction_type}
@@ -164,12 +207,15 @@
 //       accessorKey: "amount_display",
 //       cell: ({ row }) => {
 //         const t = row.original
+//         const amountColor =
+//           t.transaction_type === "income"
+//             ? "text-income"
+//             : t.transaction_type === "transfer"
+//               ? "text-warning"
+//               : "text-expense"
 //         return (
-//           <span className={`text-sm font-semibold whitespace-nowrap ${t.transaction_type === "income"
-//               ? "text-green-600 dark:text-green-400"
-//               : "text-red-600 dark:text-red-400"
-//             }`}>
-//             {t.transaction_type === "income" ? "+" : "-"}
+//           <span className={`text-sm font-semibold whitespace-nowrap font-amount ${amountColor}`}>
+//             {t.transaction_type === "income" ? "+" : t.transaction_type === "transfer" ? "→" : "-"}
 //             {symbol}{t.amount_display.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
 //           </span>
 //         )
@@ -261,6 +307,47 @@
 //               </Button>
 //             ))}
 //           </div>
+//         </div>
+//         {/* added — new date-range filter row */}
+//         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 pt-3 border-t border-border">
+//           <div className="flex gap-2 flex-wrap">
+//             {([
+//               ["all", "All time"],
+//               ["7d", "7 Days"],
+//               ["15d", "15 Days"],
+//               ["1m", "1 Month"],
+//               ["custom", "Custom"],
+//             ] as [DateRangeOption, string][]).map(([value, label]) => (
+//               <Button
+//                 key={value}
+//                 variant={dateRangeOption === value ? "default" : "outline"}
+//                 size="sm"
+//                 onClick={() => handleDateRangeSelect(value)}
+//               >
+//                 {label}
+//               </Button>
+//             ))}
+//           </div>
+
+//           {dateRangeOption === "custom" && (
+//             <div className="flex items-center gap-2">
+//               <Input
+//                 type="date"
+//                 value={customStartDate}
+//                 onChange={(e) => { setCustomStartDate(e.target.value); setPage(1) }}
+//                 className="w-auto"
+//                 max={customEndDate || undefined}
+//               />
+//               <span className="text-sm text-muted-foreground">to</span>
+//               <Input
+//                 type="date"
+//                 value={customEndDate}
+//                 onChange={(e) => { setCustomEndDate(e.target.value); setPage(1) }}
+//                 className="w-auto"
+//                 min={customStartDate || undefined}
+//               />
+//             </div>
+//           )}
 //         </div>
 //       </Card>
 
@@ -365,6 +452,7 @@
 //   )
 // }
 
+// NOTE: 2nd change
 
 
 // src/app/(dashboard)/transactions/page.tsx
@@ -651,7 +739,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <Card className="p-4 glass-card border border-border/80 shadow-xs">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -720,7 +808,7 @@ export default function TransactionsPage() {
       </Card>
 
       {/* Table */}
-      <Card>
+      <Card className="glass-card border border-border/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

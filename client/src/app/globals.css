@@ -304,9 +304,40 @@
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
   }
 
+  .glass-card {
+    background: oklch(from var(--card) l c h / 75%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid oklch(from var(--border) l c h / 65%);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .glass-card {
+    background: oklch(from var(--card) l c h / 60%);
+    border: 1px solid oklch(1 0 0 / 10%);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* Radiant mesh gradient for hero and backgrounds */
+  .mesh-gradient {
+    background: radial-gradient(circle at 15% 15%, oklch(0.5 0.19 250 / 12%) 0%, transparent 45%),
+                radial-gradient(circle at 85% 25%, oklch(0.52 0.19 305 / 12%) 0%, transparent 50%),
+                radial-gradient(circle at 50% 85%, oklch(0.55 0.15 145 / 8%) 0%, transparent 45%);
+  }
+
+  .dark .mesh-gradient {
+    background: radial-gradient(circle at 15% 15%, oklch(0.68 0.16 250 / 15%) 0%, transparent 45%),
+                radial-gradient(circle at 85% 25%, oklch(0.7 0.15 300 / 15%) 0%, transparent 50%),
+                radial-gradient(circle at 50% 85%, oklch(0.65 0.15 145 / 10%) 0%, transparent 45%);
+  }
+
   /* Gradient brand text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent;
+    @apply bg-linear-to-r from-primary via-indigo-400 to-purple-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-emerald {
+    @apply bg-linear-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent;
   }
 
   /* Income/Expense badges */
@@ -318,9 +349,22 @@
     @apply bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20;
   }
 
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 25px -4px oklch(from var(--primary) l c h / 30%);
+  }
+
+  .glow-ai {
+    box-shadow: 0 0 25px -4px oklch(from var(--ai) l c h / 35%);
+  }
+
   /* Card hover effect */
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/40;
+  }
+
+  .interactive-hover {
+    @apply transition-all duration-200 hover:scale-[1.015] active:scale-[0.985];
   }
 
   /* Subtle gradient background */
@@ -328,7 +372,12 @@
     background-image:
       linear-gradient(to right, oklch(0.5 0.2 264 / 3%) 1px, transparent 1px),
       linear-gradient(to bottom, oklch(0.5 0.2 264 / 3%) 1px, transparent 1px);
-    background-size: 24px 24px;
+    background-size: 28px 28px;
+  }
+
+  .bg-grid-dots {
+    background-image: radial-gradient(oklch(from var(--foreground) l c h / 8%) 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 
   /* Page transition */
@@ -336,19 +385,69 @@
     @apply animate-in fade-in-0 slide-in-from-bottom-4 duration-300;
   }
 
-  /* Financial figures — tabular mono digits so amounts align
-     vertically like a statement, and don't visually shift width
-     as digits change (e.g. during count-up animations). */
+  /* Financial figures */
   .font-amount {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
   }
 
-  /* AI-sourced content badge/card treatment — pairs with the
-     --ai token so purple consistently means "this came from AI"
-     across insights, categorization suggestions, anomaly flags. */
+  /* AI-sourced content badge */
   .badge-ai {
     @apply bg-ai-muted text-ai border border-ai/20;
+  }
+
+  /* Animated border sheen */
+  .border-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .border-sheen::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(90deg, transparent, oklch(from var(--primary) l c h / 40%), transparent);
+    background-size: 200% 100%;
+    animation: sheen 4s linear infinite;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  @keyframes sheen {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+/* =========================================================================
+   VIEW TRANSITION (CIRCULAR THEME REVEAL)
+   Creates the viral expanding circular wave when switching themes
+========================================================================= */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 99999;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 99999;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 }
