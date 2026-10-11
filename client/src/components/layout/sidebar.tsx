@@ -1,3 +1,268 @@
+// // src/components/layout/sidebar.tsx
+// "use client"
+
+// import Link from "next/link"
+// import { usePathname } from "next/navigation"
+// import { cn } from "@/lib/utils"
+// import { NAV_ITEMS, APP_NAME } from "@/constants"
+// import { useAuthStore } from "@/store/auth.store"
+// import {
+//     LayoutDashboard, ArrowLeftRight, Target,
+//     BarChart3, Sparkles, Settings, TrendingUp,
+//     LogOut, ChevronLeft,
+// } from "lucide-react"
+// import { Button } from "@/components/ui/button"
+// import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+// import { Badge } from "@/components/ui/badge"
+// import {
+//     Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+// } from "@/components/ui/tooltip"
+// import { motion, AnimatePresence } from "framer-motion"
+// import { useState } from "react"
+
+// const iconMap = {
+//     LayoutDashboard,
+//     ArrowLeftRight,
+//     Target,
+//     BarChart3,
+//     Sparkles,
+//     Settings,
+// } as const
+
+// interface SidebarProps {
+//     onLogout: () => void
+// }
+
+// export function Sidebar({ onLogout }: SidebarProps) {
+//     const pathname = usePathname()
+//     const { user } = useAuthStore()
+//     const [collapsed, setCollapsed] = useState(false)
+
+//     const initials = user?.full_name
+//         ?.split(" ")
+//         .map((n) => n[0])
+//         .join("")
+//         .toUpperCase()
+//         .slice(0, 2) ?? "U"
+
+//     return (
+//         <TooltipProvider delayDuration={0}>
+//             <motion.aside
+//                 animate={{ width: collapsed ? 72 : 240 }}
+//                 transition={{ duration: 0.2, ease: "easeInOut" }}
+//                 className="relative hidden md:flex flex-col h-screen bg-sidebar border-r border-sidebar-border shrink-0 overflow-hidden"
+//             >
+//                 {/* ── Logo ── */}
+//                 {/* <div className="flex items-center h-16 px-4 border-b border-sidebar-border shrink-0">
+//                     <div className="flex items-center gap-3 overflow-hidden">
+//                         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+//                             <TrendingUp className="w-4 h-4 text-primary-foreground" />
+//                         </div>
+//                         <AnimatePresence>
+//                             {!collapsed && (
+//                                 <motion.span
+//                                     initial={{ opacity: 0, width: 0 }}
+//                                     animate={{ opacity: 1, width: "auto" }}
+//                                     exit={{ opacity: 0, width: 0 }}
+//                                     className="font-semibold text-sm whitespace-nowrap overflow-hidden"
+//                                 >
+//                                     {APP_NAME}
+//                                 </motion.span>
+//                             )}
+//                         </AnimatePresence>
+//                     </div>
+//                 </div> */}
+
+//                 <div className={cn(
+//                     "flex items-center h-16 px-4 border-b border-sidebar-border shrink-0",
+//                     collapsed ? "justify-center" : "justify-between"
+//                 )}>
+//                     <AnimatePresence mode="wait">
+//                         {!collapsed && (
+//                             <motion.div
+//                                 key="brand"
+//                                 initial={{ opacity: 0 }}
+//                                 animate={{ opacity: 1 }}
+//                                 exit={{ opacity: 0 }}
+//                                 transition={{ duration: 0.15 }}
+//                                 className="flex items-center gap-3 overflow-hidden"
+//                             >
+//                                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+//                                     <TrendingUp className="w-4 h-4 text-primary-foreground" />
+//                                 </div>
+//                                 <span className="font-semibold text-sm whitespace-nowrap overflow-hidden">
+//                                     {APP_NAME}
+//                                 </span>
+//                             </motion.div>
+//                         )}
+//                     </AnimatePresence>
+
+//                     <Tooltip>
+//                         <TooltipTrigger asChild>
+//                             <Button
+//                                 variant="ghost"
+//                                 size="icon"
+//                                 onClick={() => setCollapsed(!collapsed)}
+//                                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+//                                 className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+//                             >
+//                                 <motion.div
+//                                     animate={{ rotate: collapsed ? 180 : 0 }}
+//                                     transition={{ duration: 0.2 }}
+//                                 >
+//                                     <ChevronLeft className="h-4 w-4" />
+//                                 </motion.div>
+//                             </Button>
+//                         </TooltipTrigger>
+//                         <TooltipContent side="right">
+//                             {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+//                         </TooltipContent>
+//                     </Tooltip>
+//                 </div>
+
+//                 {/* ── Nav Items ── */}
+//                 <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+//                     {NAV_ITEMS.map((item) => {
+//                         const Icon = iconMap[item.icon as keyof typeof iconMap]
+//                         const isActive = pathname === item.href ||
+//                             (item.href !== "/dashboard" && pathname.startsWith(item.href))
+
+//                         const navItem = (
+//                             <Link
+//                                 key={item.href}
+//                                 href={item.href}
+//                                 className={cn(
+//                                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative",
+//                                     isActive
+//                                         ? "bg-primary/10 text-primary"
+//                                         : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+//                                 )}
+//                             >
+//                                 {/* Active indicator */}
+//                                 {isActive && (
+//                                     <motion.div
+//                                         layoutId="activeNav"
+//                                         className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full"
+//                                     />
+//                                 )}
+
+//                                 <Icon className={cn(
+//                                     "h-4 w-4 shrink-0",
+//                                     isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+//                                 )} />
+
+//                                 <AnimatePresence>
+//                                     {!collapsed && (
+//                                         <motion.span
+//                                             initial={{ opacity: 0, width: 0 }}
+//                                             animate={{ opacity: 1, width: "auto" }}
+//                                             exit={{ opacity: 0, width: 0 }}
+//                                             className="whitespace-nowrap overflow-hidden"
+//                                         >
+//                                             {item.label}
+//                                         </motion.span>
+//                                     )}
+//                                 </AnimatePresence>
+
+//                                 {/* AI badge */}
+//                                 {item.label === "AI Insights" && !collapsed && (
+//                                     <Badge
+//                                         variant="secondary"
+//                                         className="ml-auto text-[10px] px-1.5 py-0 h-4 badge-ai"
+//                                     >
+//                                         AI
+//                                     </Badge>
+//                                 )}
+//                             </Link>
+//                         )
+
+//                         if (collapsed) {
+//                             return (
+//                                 <Tooltip key={item.href}>
+//                                     <TooltipTrigger asChild>{navItem}</TooltipTrigger>
+//                                     <TooltipContent side="right">{item.label}</TooltipContent>
+//                                 </Tooltip>
+//                             )
+//                         }
+
+//                         return navItem
+//                     })}
+//                 </nav>
+
+//                 {/* ── User section ── */}
+//                 <div className="p-2 border-t border-sidebar-border">
+//                     <div className={cn(
+//                         "flex items-center gap-3 p-2 rounded-lg",
+//                         collapsed ? "justify-center" : ""
+//                     )}>
+//                         <Avatar className="h-8 w-8 shrink-0">
+//                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+//                                 {initials}
+//                             </AvatarFallback>
+//                         </Avatar>
+
+//                         <AnimatePresence>
+//                             {!collapsed && (
+//                                 <motion.div
+//                                     initial={{ opacity: 0, width: 0 }}
+//                                     animate={{ opacity: 1, width: "auto" }}
+//                                     exit={{ opacity: 0, width: 0 }}
+//                                     className="flex-1 overflow-hidden min-w-0"
+//                                 >
+//                                     <p className="text-sm font-medium truncate leading-tight">
+//                                         {user?.full_name ?? "User"}
+//                                     </p>
+//                                     <p className="text-xs text-muted-foreground truncate leading-tight">
+//                                         {user?.email ?? ""}
+//                                     </p>
+//                                 </motion.div>
+//                             )}
+//                         </AnimatePresence>
+
+//                         <AnimatePresence>
+//                             {!collapsed && (
+//                                 <motion.div
+//                                     initial={{ opacity: 0 }}
+//                                     animate={{ opacity: 1 }}
+//                                     exit={{ opacity: 0 }}
+//                                 >
+//                                     <Tooltip>
+//                                         <TooltipTrigger asChild>
+//                                             <Button
+//                                                 variant="ghost"
+//                                                 size="icon"
+//                                                 className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+//                                                 onClick={onLogout}
+//                                             >
+//                                                 <LogOut className="h-4 w-4" />
+//                                             </Button>
+//                                         </TooltipTrigger>
+//                                         <TooltipContent side="right">Sign out</TooltipContent>
+//                                     </Tooltip>
+//                                 </motion.div>
+//                             )}
+//                         </AnimatePresence>
+//                     </div>
+//                 </div>
+
+//                 {/* ── Collapse toggle ── */}
+//                 {/* <Button
+//                     variant="ghost"
+//                     size="icon"
+//                     onClick={() => setCollapsed(!collapsed)}
+//                     className="absolute -right-3 top-20 h-6 w-6 rounded-full border border-border bg-background shadow-sm hover:bg-accent z-10"
+//                 >
+//                     <motion.div animate={{ rotate: collapsed ? 180 : 0 }}>
+//                         <ChevronLeft className="h-3 w-3" />
+//                     </motion.div>
+//                 </Button> */}
+//             </motion.aside>
+//         </TooltipProvider>
+//     )
+// }
+
+// NOTE: 2nd change
+
 // src/components/layout/sidebar.tsx
 "use client"
 
@@ -132,23 +397,24 @@ export function Sidebar({ onLogout }: SidebarProps) {
                                 key={item.href}
                                 href={item.href}
                                 className={cn(
-                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative",
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative z-0",
                                     isActive
-                                        ? "bg-primary/10 text-primary"
-                                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                                        ? "text-primary font-semibold"
+                                        : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                                 )}
                             >
-                                {/* Active indicator */}
+                                {/* Animated Active Pill */}
                                 {isActive && (
                                     <motion.div
-                                        layoutId="activeNav"
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full"
+                                        layoutId="activeNavPill"
+                                        className="absolute inset-0 bg-primary/10 border border-primary/25 rounded-xl -z-10 shadow-sm"
+                                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
                                     />
                                 )}
 
                                 <Icon className={cn(
-                                    "h-4 w-4 shrink-0",
-                                    isActive ? "text-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+                                    "h-4 w-4 shrink-0 transition-transform group-hover:scale-110 duration-200",
+                                    isActive ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"
                                 )} />
 
                                 <AnimatePresence>
@@ -168,7 +434,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                                 {item.label === "AI Insights" && !collapsed && (
                                     <Badge
                                         variant="secondary"
-                                        className="ml-auto text-[10px] px-1.5 py-0 h-4 badge-ai"
+                                        className="ml-auto text-[10px] px-1.5 py-0 h-4 badge-ai font-semibold shadow-xs"
                                     >
                                         AI
                                     </Badge>
